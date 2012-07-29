@@ -5,22 +5,22 @@ Created on Sun Jul 29 10:33:03 2012
 @author: mdavidsaver
 """
 
-from socket import inet_aton
-
-from caproto import VERSION, caheader, casearchreply
+from caproto import VERSION, caheader, casearchreply, addr2int
+from interface import INameServer
 
 from twisted.internet.protocol import DatagramProtocol
 
 class PVSearch(object):
     """Active Search request from a client.
     """
-    def __init__(self, cid, pv, endpoint, version, transport, nack=False):
+    def __init__(self, cid, pv, endpoint, version, transport,
+                 localport, nack=False):
         self.cid=cid
         self.pv=pv
         self.client=endpoint
         self.clientVersion=version
         self.__transport=transport
-        self.__defaultport=transport.getHost().port
+        self.__defaultport=localport
         self.__replied=False
         self.__nack=nack
 
@@ -30,7 +30,7 @@ class PVSearch(object):
         servip, servport = server
         servport = servport or self.__defaultport
         if servip:
-            servip = inet_aton(servip)
+            servip = addr2int(servip)
         else:
             servip = 0xffffffff
 
@@ -52,9 +52,15 @@ class PVSearch(object):
         return u'PVSearch(%u,%s)'%(self.cid, self.pv)
 
 class CASUDP(DatagramProtocol):
+    """UDP part of CA server protocol.
+    
+    Supports PV name lookup
+    """
 
-    def __init__(self, nameserv):
+    def __init__(self, nameserv, localport):
+        assert INameServer.providedBy(nameserv)
         self.nameserv = nameserv
+        self.localport = localport
 
     def datagramReceived(self, message, endpoint):
         message=buffer(message)
@@ -77,7 +83,7 @@ class CASUDP(DatagramProtocol):
 
     def __lookup(self, endpoint, reply, ver, cid, cid2, body):
         pv = str(body).strip('\0')
-        search = PVSearch(cid, pv, endpoint, ver, self.transport)
+        search = PVSearch(cid, pv, endpoint, ver, self.transport, self.localport)
         self.nameserv.lookupPV(search)
 
     def __ignore(self, *args, **kws):

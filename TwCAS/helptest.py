@@ -35,7 +35,7 @@ class TestUDPTransport:
         self.defer.callback((data, dest or self.peer))
 
     def getHost(self):
-        return IPv4Address('UDP', '127.0.0.1', 4242)
+        return IPv4Address('UDP', '127.0.0.1', 1423)
 
 def makeCA(cmd, dtype=0, dcount=0, p1=0, p2=0, body=''):
     if len(body)>=0xffff:
@@ -80,7 +80,9 @@ def checkCA(test, data,
 
     if bodylen is not None:
         test.assertEqual(len(pbody), bodylen)
+    if dcount is not None:
+        test.assertEqual(pdcount, dcount)
     if body is not None:
-        test.assertEqual(pbody, body)
+        test.assertEqual(str(pbody), body)
 
     return TestMsg(cmd=pcmd, dtype=pdtype, dcount=pdcount, p1=pp1, p2=pp2, body=pbody), remainder

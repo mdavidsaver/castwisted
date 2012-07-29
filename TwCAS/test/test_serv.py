@@ -34,17 +34,12 @@ class TestUDP(unittest.TestCase):
     
     def setUp(self):
         self.nameserv = TestNameServer()
-        self.proto = udpserver.CASUDP(self.nameserv)
+        self.proto = udpserver.CASUDP(self.nameserv, 1433)
         self.transport = helptest.TestUDPTransport()
         self.proto.makeConnection(self.transport)
 
     def test_lookuplocal(self):
         client = ('127.0.0.1',1234)
-
-        request = helptest.makeCA(6, dtype=5, dcount=10, p1=4242, p2=4242,
-                                  body=padMsg('helloworld'))
-
-        self.proto.datagramReceived(request, client)
 
         @self.nameserv.defer.addBoth
         def checkSearch(result):
@@ -67,9 +62,49 @@ class TestUDP(unittest.TestCase):
             self.assertEqual(dest, client)
             ebody = struct.pack('!Hxxxxxx', VERSION)
             msg, remainder = helptest.checkCA(self, pkt, cmd=6, bodylen=8,
-                                              dtype=1234, dcount=0, p1=0xffffffff,
+                                              dtype=1433, dcount=0, p1=0xffffffff,
                                               p2=4242, body=ebody)
 
             self.assertEqual(str(remainder), '')
+
+        request  = helptest.makeCA(0, dtype=15, dcount=10)
+        request += helptest.makeCA(6, dtype=5, dcount=10, p1=4242, p2=4242,
+                                   body=padMsg('helloworld'))
+
+        self.proto.datagramReceived(request, client)
+
+        return self.nameserv.defer
+
+    def test_lookupNameServer(self):
+        client = ('127.0.0.1',1234)
+        server = ('192.168.5.1', 4321)
+
+        @self.nameserv.defer.addCallback
+        def checkSearch(result):
+            self.assertEqual(result.pv, 'helloworld')
+            self.assertEqual(result.cid, 4242)
+            self.assertEqual(result.client, client)
+            self.assertEqual(result.clientVersion, 10)
+            result.claim(server=server)
+            return self.transport.defer
+
+        @self.transport.defer.addCallback
+        def checkReply(result):
+            pkt, dest = result
+            self.assertEqual(dest, client)
+            ebody = struct.pack('!Hxxxxxx', VERSION)
+            msg, remainder = helptest.checkCA(self, pkt, cmd=6, bodylen=8,
+                                              dtype=4321, dcount=0, p1=0xc0a80501,
+                                              p2=4242, body=ebody)
+
+            self.assertEqual(str(remainder), '')
+            return result
+
+        request  = helptest.makeCA(0, dtype=15, dcount=10)
+        request += helptest.makeCA(6, dtype=5, dcount=10, p1=4242, p2=4242,
+                                  body=padMsg('helloworld'))
+
+        self.proto.datagramReceived(request, client)
+        
 
         return self.nameserv.defer

@@ -6,6 +6,7 @@ Created on Sun Jul 29 10:34:57 2012
 """
 
 from struct import Struct
+import socket
 
 VERSION = 10
 
@@ -33,7 +34,12 @@ assert casearchreply.size==24
 def pad(blen):
     """Returns a string with enough padding for the message of the given length
     """
-    return '\0'*(8-((blen%8)&7))
+    return '\0'*((8-(blen%8))&7)
 
 def padMsg(msg):
     return msg + pad(len(msg))
+
+__ipaddr = Struct('!I')
+def addr2int(addr):
+    I, = __ipaddr.unpack(socket.inet_aton(addr))
+    return I
