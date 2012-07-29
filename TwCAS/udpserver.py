@@ -5,6 +5,9 @@ Created on Sun Jul 29 10:33:03 2012
 @author: mdavidsaver
 """
 
+import logging
+L = logging.getLogger('TwCAS.protocol')
+
 from caproto import VERSION, caheader, casearchreply, addr2int
 from interface import INameServer
 
@@ -75,18 +78,18 @@ class CASUDP(DatagramProtocol):
         body = buffer(message, caheader.size, blen)
         remainder = buffer(message, caheader.size + blen)
 
-        self.__actions.get(cmd, self.__ignore)(self, endpoint, dtype, dcnt, p1, p2, body)
+        self.__actions.get(cmd, self.__ignore)(self, endpoint, cmd, dtype, dcnt, p1, p2, body)
         return remainder
 
     def __version(self, *args, **kws):
         pass
 
-    def __lookup(self, endpoint, reply, ver, cid, cid2, body):
+    def __lookup(self, endpoint, cmd, reply, ver, cid, cid2, body):
         pv = str(body).strip('\0')
         search = PVSearch(cid, pv, endpoint, ver, self.transport, self.localport)
         self.nameserv.lookupPV(search)
 
-    def __ignore(self, *args, **kws):
-        pass
+    def __ignore(self, endpoint, cmd, *args, **kws):
+        L.debug('Unexpected message %d from %s', cmd, endpoint)
 
     __actions={0:__version, 6:__lookup}
