@@ -259,14 +259,16 @@ class CASTCP(StatefulProtocol):
 
         try:
             chan.messageReceived(cmd, dtype, dcount, p1, p2, payload)
+        except caproto.CAProtoFault:
+            raise
         except:
             self.__fail(chan, cmd, dtype, dcount, p1, p2, payload)
             return
 
     __dispatch = {
          0: __version,
-         1: __dispatchP1,
-         2: __dispatchP1,
+         1: __dispatchP1, # event add
+         2: __dispatchP1, # event del
          4: __dispatchP1, # Write
         12: __clear,
         15: __dispatchP1, # Read w/ notify
@@ -275,3 +277,8 @@ class CASTCP(StatefulProtocol):
         20: __user,
         21: __host
     }
+
+    def __fail(self, chan, cmd, dtype, dcount, p1, p2, payload):
+        """Try to notify the client that things didn't work so well...
+        """
+        pass
