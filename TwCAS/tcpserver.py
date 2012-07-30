@@ -59,14 +59,12 @@ class PVConnect(object):
         
         chan = proto.pvserv.buildChannel(self, PV)
         
-        dbr, maxcount, rights = PV.getInfo(self)
-        
         proto.addChannel(chan)
         
         try:
             
-            msg  = caheader.pack(22, 0, 0, 0, self.cid, rights)
-            msg += caheader.pack(18, 0, dbr, maxcount, self.cid, self.sid)
+            msg  = caheader.pack(22, 0, 0, 0, self.cid, chan.rights)
+            msg += caheader.pack(18, 0, chan.dbr, chan.maxCount, self.cid, self.sid)
             proto.transport.write(msg)
             self.__replied = True
 

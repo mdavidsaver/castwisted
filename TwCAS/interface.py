@@ -52,6 +52,10 @@ class IChannel(Interface):
     cid = Attribute("Client ID associated with this channel")
     client = Attribute("Client requesting this channel tuple(Host,Port)")
     clientVersion = Attribute("Protocol version used by this client")
+    
+    dbr = Attribute("Native DBR type")
+    maxCount = Attribute("Max number of elements")
+    rights = Attribute("Permissions mask")
 
     def channelClosed():
         """Channel closed by peer.

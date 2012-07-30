@@ -26,7 +26,7 @@ class TestPV(object):
 class TestChannel(object):
     implements(IChannel)
     
-    def __init__(self, request):
+    def __init__(self, request, PV):
         self.__proto = request.getCircuit()
         assert self.__proto is not None
         self.pv = request.pv
@@ -34,6 +34,8 @@ class TestChannel(object):
         self.sid = request.sid
         self.client = request.client
         self.clientVersion = request.clientVersion
+        
+        self.dbr, self.maxCount, self.rights = PV.getInfo(request)
         
         self.write = self.__proto.transport.write
         
@@ -66,7 +68,7 @@ class TestServer(object):
             request.disclaim()
 
     def buildChannel(self, request, PV):
-        return TestChannel(request)
+        return TestChannel(request, PV)
 
 class TestConnect(unittest.TestCase):
     
