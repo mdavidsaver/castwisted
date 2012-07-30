@@ -73,8 +73,11 @@ class IChannel(Interface):
 
 class IPV(Interface):
     
-    def getInfo():
+    def getInfo(request):
         """Fetch channel information.
+        
+        The argument is an instance of @PVConnect which may to determine
+        the result.
         
         Succesive calls are allowed to return different results.
         

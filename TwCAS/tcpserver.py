@@ -39,12 +39,16 @@ class PVConnect(object):
         return self.__replied
 
     def getCircuit(self):
-        return self.__proto
+        """Get the circuit from which this request was received.
+        
+        May return None if the circuit has be lost
+        """
+        return self.__proto()
 
     def __check(self):
         assert not self.__replied, 'Attempt to claim channel after previous (dis)claim'
         proto = self.__proto()
-        if proto is None or not proto.isconnected:
+        if proto is None or not proto.connected:
             return
         return proto
 
@@ -69,6 +73,8 @@ class PVConnect(object):
         except:
             proto.dropSID(chan.sid)
             raise
+
+        return chan
 
     def disclaim(self):
         proto = self.__check()

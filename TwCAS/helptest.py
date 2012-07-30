@@ -109,6 +109,6 @@ def checkCA(test, data,
         test.assertEqual(str(pbody), body)
 
     if final:
-        self.assertEqual(len(remainder), 0)
+        test.assertEqual(len(remainder), 0)
 
     return TestMsg(cmd=pcmd, dtype=pdtype, dcount=pdcount, p1=pp1, p2=pp2, body=pbody), remainder
