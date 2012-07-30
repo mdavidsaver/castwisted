@@ -8,14 +8,18 @@ Created on Sun Jul 29 10:33:03 2012
 import logging
 L = logging.getLogger('TwCAS.protocol')
 
+from zope.interface import implements
+
 from caproto import VERSION, caheader, casearchreply, addr2int
-from interface import INameServer
+from interface import INameServer, IPVRequest
 
 from twisted.internet.protocol import DatagramProtocol
 
 class PVSearch(object):
     """Active Search request from a client.
     """
+    implements(IPVRequest)
+    sid=None # not applicable to search request/reply
     def __init__(self, cid, pv, endpoint, version, transport,
                  localport, nack=False):
         self.cid=cid
@@ -26,6 +30,10 @@ class PVSearch(object):
         self.__defaultport=localport
         self.__replied=False
         self.__nack=nack
+
+    @property
+    def replied(self):
+        return self.__replied
 
     def claim(self, server=(None,None)):
         assert not self.__replied, 'Attempt to send second search reply'

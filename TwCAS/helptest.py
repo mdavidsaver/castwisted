@@ -5,7 +5,7 @@ Testing helpers
 @author: mdavidsaver
 """
 
-from twisted.internet.interfaces import IUDPTransport
+from twisted.internet.interfaces import IUDPTransport, ITCPTransport
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, succeed
 
@@ -37,6 +37,29 @@ class TestUDPTransport:
     def getHost(self):
         return IPv4Address('UDP', '127.0.0.1', 1423)
 
+
+class TestTCPTransport:
+    implements(ITCPTransport)
+    disconnecting = False
+
+    def __init__(self):
+        self.defer = Deferred()
+
+    def write(self, data):
+        D, self.defer = self.defer, Deferred()
+        D.callback(data)
+
+    def loseConnection(self):
+        self.disconnecting = True
+        D, self.defer = self.defer, None
+        D.callback(None)
+
+    def getPeer(self):
+        return IPv4Address('TCP', '127.0.0.2', 4231)
+
+    def getHost(self):
+        return IPv4Address('TCP', '127.0.0.1', 1423)
+
 def makeCA(cmd, dtype=0, dcount=0, p1=0, p2=0, body=''):
     if len(body)>=0xffff:
         msg = caheaderlarge.pack(cmd, 0xffff, dtype, 0, p1, p2, len(body), dcount)
@@ -51,7 +74,7 @@ class TestMsg(object):
 
 def checkCA(test, data,
             cmd=None, dtype=None, dcount=None, p1=None, p2=None, body=None,
-            bodylen=None, hasdbr=False):
+            bodylen=None, hasdbr=False, final=False):
     data = buffer(data)
     if len(data)<caheader.size:
         raise TooShort()
@@ -84,5 +107,8 @@ def checkCA(test, data,
         test.assertEqual(pdcount, dcount)
     if body is not None:
         test.assertEqual(str(pbody), body)
+
+    if final:
+        self.assertEqual(len(remainder), 0)
 
     return TestMsg(cmd=pcmd, dtype=pdtype, dcount=pdcount, p1=pp1, p2=pp2, body=pbody), remainder

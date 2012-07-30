@@ -8,6 +8,10 @@ Created on Sun Jul 29 10:34:57 2012
 from struct import Struct
 import socket
 
+class CAProtoFault(RuntimeError):
+    """Unrecoverable protocol error
+    """
+
 VERSION = 10
 
 # Short header
