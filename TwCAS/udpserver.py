@@ -5,6 +5,7 @@ Created on Sun Jul 29 10:33:03 2012
 @author: mdavidsaver
 """
 
+import weakref
 import logging
 L = logging.getLogger('TwCAS.protocol')
 
@@ -26,7 +27,7 @@ class PVSearch(object):
         self.pv=pv
         self.client=endpoint
         self.clientVersion=version
-        self.__transport=transport
+        self.__transport=weakref.ref(transport)
         self.__defaultport=localport
         self.__replied=False
         self.__nack=nack
@@ -35,8 +36,14 @@ class PVSearch(object):
     def replied(self):
         return self.__replied
 
-    def claim(self, server=(None,None)):
+    def __check(self):
         assert not self.__replied, 'Attempt to send second search reply'
+        return self.__transport()
+
+    def claim(self, server=(None,None)):
+        transport = self.__check()
+        if transport is None:
+            return
 
         servip, servport = server
         servport = servport or self.__defaultport
@@ -46,17 +53,19 @@ class PVSearch(object):
             servip = 0xffffffff
 
         msg = casearchreply.pack(6, 8, servport, 0, servip, self.cid, VERSION)
-        self.__transport.write(msg, self.client)
+        transport.write(msg, self.client)
         self.__replied=True
 
     def disclaim(self):
-        assert not self.__replied, 'Attempt to send second search reply'
+        transport = self.__check()
+        if transport is None:
+            return
 
         if not self.__nack:
             return
 
         msg = caheader.pack(14, 0, 10, self.clientVersion, self.cid, self.cid)
-        self.__transport.write(msg, self.client)
+        transport.write(msg, self.client)
         self.__replied=True
 
     def __unicode__(self):
