@@ -32,6 +32,11 @@ class PVSearch(object):
         self.__replied=False
         self.__nack=nack
 
+    def __del__(self):
+        # Ensure NACK is sent if the request is forgotten
+        if not self.__replied:
+            self.disclaim()
+
     @property
     def replied(self):
         return self.__replied
@@ -43,7 +48,7 @@ class PVSearch(object):
     def claim(self, server=(None,None)):
         transport = self.__check()
         if transport is None:
-            return
+            return False
 
         servip, servport = server
         servport = servport or self.__defaultport
@@ -55,6 +60,7 @@ class PVSearch(object):
         msg = casearchreply.pack(6, 8, servport, 0, servip, self.cid, VERSION)
         transport.write(msg, self.client)
         self.__replied=True
+        return True
 
     def disclaim(self):
         transport = self.__check()

@@ -34,6 +34,11 @@ class PVConnect(object):
         self.clientVersion = proto.peerVersion
         self.__replied = False
 
+    def __del__(self):
+        # Ensure NACK is sent if the request is forgotten
+        if not self.__replied:
+            self.disclaim()
+
     @property
     def replied(self):
         return self.__replied
@@ -55,7 +60,7 @@ class PVConnect(object):
     def claim(self, PV):
         proto = self.__check()
         if proto is None:
-            return
+            return None
         
         chan = proto.pvserv.buildChannel(self, PV)
         
@@ -84,6 +89,9 @@ class PVConnect(object):
 
         msg = caheader.pack(26, 0, 0, 0, self.cid, 0)
         proto.transport.write(msg)
+
+    def __unicode__(self):
+        return u'PVConnect(%u,%s)'%(self.cid, self.pv)
 
 class CASTCP(StatefulProtocol):
     
