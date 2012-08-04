@@ -88,6 +88,27 @@ class IPV(Interface):
         Returns (native_dbr, maxcount, rights)
         """
 
+    def put(dtype, dcount, dbrdata, reply=None):
+        """Called when a put request is received.
+        
+        If the client requests completion notification then
+        the reply argument will be a @PVPut instance.
+        """
+
+    def get(dtype, dcount, reply):
+        """Called when a get request is received.
+        
+        The reply argument will be a @PVGet instance used to communicate
+        the result to the client.
+        """
+
+    def monitor(reply):
+        """Called when a get request is received.
+        
+        The reply argument will be a @PVMonitor instance used to communicate
+        the results to the client.
+        """
+
 class IPVRequest(Interface):
     """For requests involving a PV (lookup or channel create)
     """

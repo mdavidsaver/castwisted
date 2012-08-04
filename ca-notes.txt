@@ -1,0 +1,36 @@
+
+CA notes
+
+Additions/Corrections to cosylab doc
+
+http://epics.cosylab.com/cosyjava/JCA-Common/Documentation/CAproto.html
+
+# ECA_* codes are wrong.  Not just a simple enumerations.
+
+# Responce to read notify (0x0f) field P1 is status code and not SID.  Sec. 6.15.2
+
+# Event cancel reply dcount also same as request.  Sec. 6.2.2
+
+# Event data update (except for cancel confirm) can't have 0 payload.  (libca ignores message)
+
+# Event data update with status != ECA_NORMAL has payload all zeros (pcas).
+  And translated into an exception by the client (libca).
+
+CA Version changes
+
+Base      | CA  | Year
+3.14.12   | 13  | 2010  (Dynamic array size in monitors)
+3.14.12   | 12  | 2010  (PV search over tcp)
+3.14.0-b2 | 11  | 2002  (large array?, circuit priority?)
+3.14.0-b2 | 10  | 2002  (Beacon counter???)
+3.14.0-b1 |  9  | 2001  (Large packet header)
+3.13.0-b10|  8  | 1997  (??)
+3.13.0-a5 |  7  | 1996  (Start of CVS history)
+
+
+Behavior changes
+
+3.14.11 -> 12
+
+RSRV sends version message before client sends channel create.
+Also send access rights before acknowledging channel created.

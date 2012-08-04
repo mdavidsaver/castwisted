@@ -12,6 +12,16 @@ class CAProtoFault(RuntimeError):
     """Unrecoverable protocol error
     """
 
+class CAException(RuntimeError):
+    """Fail the operation by sending an exception to the client.
+    
+    Thrown during processing of a received message to signal a failure of the
+    operation which does not close the channel or the TCP connection.
+    """
+    def __init__(self, status, msg):
+        self.eca = status
+        RuntimeError.__init__(self, msg)
+
 VERSION = 10
 
 # Short header
@@ -34,6 +44,10 @@ assert caheaderlarge.size==24
 casearchreply = Struct('!HHHHIIHxxxxxx')
 
 assert casearchreply.size==24
+
+casubscript = Struct('!xxxxxxxxxxxxHxx')
+
+assert casubscript.size==16
 
 def pad(blen):
     """Returns a string with enough padding for the message of the given length

@@ -115,7 +115,7 @@ class CASTCP(StatefulProtocol):
         self.peerVersion = 0
         self.peerUser = '<Unknown>'
         
-        self.__nextchanid = 0
+        self.__nextchanid = 2 # start a 2 so we avoid sid==ECA_NORMAL
         self.__channels = {}
 
     @property
@@ -126,7 +126,10 @@ class CASTCP(StatefulProtocol):
         I = self.__nextchanid
         while I in self.__channels:
             I += 1
-        self.__nextchanid = I+1
+        if I>=0xffffffff:
+            I = 2
+        else:
+            self.__nextchanid = I+1
         return I
 
     def dropSID(self, sid):
