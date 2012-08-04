@@ -132,7 +132,7 @@ class TestCASChannel(unittest.TestCase):
 
         self.assertEqual(request.pv, 'iamhere')
         self.assertEqual(request.cid, 15)
-        self.assertEqual(request.sid, 0)
+        self.assertEqual(request.sid, 2)
         self.assertEqual(request.client, ('127.0.0.2', 4231))
         self.assertEqual(request.clientVersion, caproto.VERSION+1)
 
@@ -155,7 +155,7 @@ class TestCASChannel(unittest.TestCase):
         data = yield D
 
         pkt, rem = checkCA(self, data, cmd=22, p1=15, p2=3)
-        pkt, rem = checkCA(self, rem, cmd=18, dtype=4, dcount=1, p1=15, p2=0)
+        pkt, rem = checkCA(self, rem, cmd=18, dtype=4, dcount=1, p1=15, p2=2)
         
         D = self.transport.defer
             
