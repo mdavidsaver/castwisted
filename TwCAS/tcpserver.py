@@ -21,6 +21,8 @@ import ECA
 import caproto
 from caproto import caheader, caheaderext, caheaderlarge
 
+from PMux import MuxProducer
+
 class PVConnect(object):
     """A request by the Peer to create a channel connecting to a PV
     """
@@ -148,9 +150,9 @@ class CASTCP(StatefulProtocol):
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
+        self.pmux = MuxProducer(self.transport)
         msg = caheader.pack(0, 0, self.prio, caproto.VERSION, 0, 0)
         self.transport.write(msg)
-
 
     def connectionLost(self, reason):
         if reason is connectionDone:

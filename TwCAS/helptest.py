@@ -5,7 +5,7 @@ Testing helpers
 @author: mdavidsaver
 """
 
-from twisted.internet.interfaces import IUDPTransport, ITCPTransport
+from twisted.internet.interfaces import IUDPTransport, ITCPTransport, IConsumer
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, succeed
 
@@ -37,9 +37,8 @@ class TestUDPTransport:
     def getHost(self):
         return IPv4Address('UDP', '127.0.0.1', 1423)
 
-
 class TestTCPTransport:
-    implements(ITCPTransport)
+    implements(ITCPTransport, IConsumer)
     disconnecting = False
 
     def __init__(self):
@@ -59,6 +58,12 @@ class TestTCPTransport:
 
     def getHost(self):
         return IPv4Address('TCP', '127.0.0.1', 1423)
+
+    def registerProducer(self, producer, stream):
+        pass
+    
+    def unregisterProducer(self):
+        pass
 
 def makeCA(cmd, dtype=0, dcount=0, p1=0, p2=0, body=''):
     if len(body)>=0xffff:

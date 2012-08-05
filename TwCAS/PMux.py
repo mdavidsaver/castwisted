@@ -51,6 +51,10 @@ class MuxProducer(object):
 
         self._write = self.consumer.write
 
+    @property
+    def paused(self):
+        return self._paused
+
     def stopProducing(self):
         assert self.consumer
         C, self.consumer = self.consumer, None
