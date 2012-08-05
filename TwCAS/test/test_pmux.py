@@ -6,7 +6,7 @@ from twisted.trial import unittest
 
 from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.defer import Deferred, inlineCallbacks, CancelledError
 from twisted.internet import error
 
 from TwCAS.PMux import MuxProducer
@@ -101,6 +101,7 @@ class TestMux(unittest.TestCase):
 
     @inlineCallbacks
     def test_waiter(self):
+        # initially not paused
         W = self.prod.getWaiter()
         self.assertEqual(self.prod._waiters, []) # already fired
 
@@ -109,6 +110,21 @@ class TestMux(unittest.TestCase):
         self.prod.pauseProducing()
         self.assertTrue(self.prod._paused)
 
+        # Check cancelling
+        W = self.prod.getWaiter()
+        self.assertEqual(self.prod._waiters, [W])
+        self.assertFalse(W.called)
+
+        W.cancel()
+        self.assertEqual(self.prod._waiters, [])
+
+        try:
+            yield W
+            self.assertTrue(False, "Expected exception")
+        except CancelledError:
+            self.assertTrue(True)
+
+        # check queuing
         W = self.prod.getWaiter()
         self.assertEqual(self.prod._waiters, [W])
         self.assertFalse(W.called)
@@ -118,6 +134,7 @@ class TestMux(unittest.TestCase):
 
         self.assertTrue(W.called)
 
+        # check stop
         self.prod.pauseProducing()
 
         W = self.prod.getWaiter()
