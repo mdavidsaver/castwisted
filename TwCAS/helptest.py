@@ -19,7 +19,7 @@ class InvalidMessage(RuntimeError):
     pass
 
 class TestUDPTransport:
-    implements(IUDPTransport)
+    implements(IUDPTransport, IConsumer)
 
     def __init__(self, defer=None):
         self.defer = defer or Deferred()
@@ -36,6 +36,12 @@ class TestUDPTransport:
 
     def getHost(self):
         return IPv4Address('UDP', '127.0.0.1', 1423)
+
+    def registerProducer(self, producer, stream):
+        pass
+    
+    def unregisterProducer(self):
+        pass
 
 class TestTCPTransport:
     implements(ITCPTransport, IConsumer)

@@ -47,7 +47,7 @@ class PVSearch(object):
 
     def claim(self, server=(None,None)):
         transport = self.__check()
-        if transport is None:
+        if transport is None or transport.bufferFull:
             return False
 
         servip, servport = server
@@ -64,7 +64,7 @@ class PVSearch(object):
 
     def disclaim(self):
         transport = self.__check()
-        if transport is None:
+        if transport is None or transport.bufferFull:
             return
 
         if not self.__nack:
@@ -87,6 +87,10 @@ class CASUDP(DatagramProtocol):
         assert INameServer.providedBy(nameserv)
         self.nameserv = nameserv
         self.localport = localport
+
+    def startProtocol(self):
+        self.transport.bufferFull = False
+        self.transport.registerProducer(self, True)
 
     def datagramReceived(self, message, endpoint):
         message=buffer(message)
@@ -116,3 +120,10 @@ class CASUDP(DatagramProtocol):
         L.debug('Unexpected message %d from %s', cmd, endpoint)
 
     __actions={0:__version, 6:__lookup}
+    
+    def resumeProducing(self):
+        self.transport.bufferFull = False
+    def pauseProducing(self):
+        self.transport.bufferFull = True
+    def stopProducing(self):
+        self.transport.bufferFull = True
