@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Jul 29 23:01:30 2012
-
-@author: mdavidsaver
-"""
 
 import weakref
 import logging
@@ -13,7 +8,6 @@ from zope.interface import implements
 from interfaces import IChannel
 
 from twisted.internet import reactor
-from twisted.internet.defer import DeferredQueue
 
 import ECA
 
@@ -41,7 +35,7 @@ class SendData(object):
         self.complete = True
 
     def update(self, data, dcount):
-        if complete:
+        if self.complete:
             return
         chan = self.channel
         
@@ -131,7 +125,10 @@ class Channel(object):
 
 
     def getCircuit(self):
-        return self.__proto
+        return self.__proto.pmux
+
+    def getPeer(self):
+        return self.__proto.transport.getPeer()
 
     def __eventadd(self, cmd, dtype, dcount, p1, p2, payload):
         if p2 in self.__subscriptions:
@@ -164,7 +161,7 @@ class Channel(object):
         
         get = GetNotify(self, p2, dtype, dcount)
         
-        self.pv.
+        self.pv.get(get)
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         pass
@@ -182,3 +179,10 @@ class Channel(object):
         15: __getnotify, # Read w/ notify
         19: __putnotify, # Write w/ notify
     }
+
+    def __unicode__(self):
+        if self.__proto is None:
+            return u'Channel %s for <disconnected>'%(self.pv)
+        else:
+            P = self.getPeer()
+            return u'Channel %s for %s:%d' % (self.pv, P.host, P.port)

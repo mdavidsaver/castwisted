@@ -71,11 +71,17 @@ class IChannel(Interface):
         """Send data on the circuit
         """
 
-    def getCircuit():
-        """Return the @CASTCP behind this channel
+    def getPeer():
+        """Returns the IP4Address of the client
         """
 
-class IPV(Interface):
+    def getCircuit():
+        """Return the @MuxProducer behind this channel
+        """
+
+class IPVDBR(Interface):
+    """Interface used to move DBR data to and from a PV.
+    """
     
     def getInfo(request):
         """Fetch channel information.
@@ -92,20 +98,20 @@ class IPV(Interface):
         """Called when a put request is received.
         
         If the client requests completion notification then
-        the reply argument will be a @PVPut instance.
+        the reply argument will be a @PutNotify instance.
         """
 
-    def get(dtype, dcount, reply):
+    def get(reply):
         """Called when a get request is received.
         
-        The reply argument will be a @PVGet instance used to communicate
+        The reply argument will be a @GetNotify instance used to communicate
         the result to the client.
         """
 
     def monitor(reply):
         """Called when a get request is received.
         
-        The reply argument will be a @PVMonitor instance used to communicate
+        The reply argument will be a @Subscription instance used to communicate
         the results to the client.
         """
 

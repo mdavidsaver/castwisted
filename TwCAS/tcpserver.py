@@ -17,9 +17,8 @@ from twisted.internet.defer import Deferred
 
 from interface import INameServer, IPVServer, IPVRequest
 
-import ECA
 import caproto
-from caproto import caheader, caheaderext, caheaderlarge
+from caproto import caheader, caheaderext
 
 from PMux import MuxProducer
 
@@ -69,7 +68,7 @@ class PVConnect(object):
         proto.addChannel(chan)
         
         try:
-            
+            #TODO: Does not check for buffer full condition
             msg  = caheader.pack(22, 0, 0, 0, self.cid, chan.rights)
             msg += caheader.pack(18, 0, chan.dbr, chan.maxCount, self.cid, self.sid)
             proto.transport.write(msg)
@@ -119,6 +118,8 @@ class CASTCP(StatefulProtocol):
         
         self.__nextchanid = 2 # start a 2 so we avoid sid==ECA_NORMAL
         self.__channels = {}
+        
+        self.pmux = None
 
     @property
     def connected(self):
@@ -163,6 +164,7 @@ class CASTCP(StatefulProtocol):
             chan.channelClosed()
         # at this point the circuit object is defuct...
         self.__channels = None
+        self.pmux = None
 
     def getInitialState(self):
         """Entry point for message processing state machine.
@@ -212,7 +214,7 @@ class CASTCP(StatefulProtocol):
         try:
             self.__dispatch.get(cmd, self.__ignore)(self, cmd, *args, **kws)
         except caproto.CAProtoFault,e:
-            L.fatal('Connection from %s closed after protocol error', self.transport.getPeer())
+            L.fatal('Connection from %s closed after protocol error: %s', self.transport.getPeer(),e)
             self.transport.loseConnection()
         except:
             L.exception('Error processing message %d from: %s', cmd, self.transport.getPeer())
@@ -303,3 +305,13 @@ class CASTCP(StatefulProtocol):
         20: __user,
         21: __host
     }
+
+    def __unicode__(self):
+        if self.pmux is not None:
+            P = self.transport.getPeer()
+            return u'Circuit(%s:%d)' % (P.host, P.port)
+        elif self.__channels is not None:
+            return u'Circuit(OPENING)'
+        else:
+            return u'Circuit(CLOSED)'
+            

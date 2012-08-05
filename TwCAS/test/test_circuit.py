@@ -11,14 +11,14 @@ from twisted.trial import unittest
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet import reactor
 
-from TwCAS.interface import INameServer, IPVServer, IChannel, IPV
+from TwCAS.interface import INameServer, IPVServer, IChannel, IPVDBR
 
 from TwCAS import tcpserver, helptest, caproto
 
 from TwCAS.helptest import makeCA, checkCA
 
 class TestPV(object):
-    implements(IPV)
+    implements(IPVDBR)
     
     def getInfo(self, request):
         return (4, 1, 3)
