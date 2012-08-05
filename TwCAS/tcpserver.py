@@ -14,11 +14,14 @@ from zope.interface import implements
 from twisted.internet.protocol import connectionDone
 from twisted.protocols.stateful import StatefulProtocol
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IPushProducer
 
 from interface import INameServer, IPVServer, IPVRequest
 
 import caproto
 from caproto import caheader, caheaderext
+
+from udpserver import PVSearch
 
 from PMux import MuxProducer
 
@@ -95,11 +98,14 @@ class PVConnect(object):
         return u'PVConnect(%u,%s)'%(self.cid, self.pv)
 
 class CASTCP(StatefulProtocol):
+    implements(IPushProducer)
     
-    def __init__(self, pvserver, prio=0, nameserv=None):
+    def __init__(self, pvserver, prio=0, nameserv=None, localport=-1):
+        assert localport>0, "Invalid local server port"
         self.pvserv = pvserver
         assert IPVServer.providedBy(pvserver)
 
+        self.localport = localport
         self.nameserv = nameserv
         if self.nameserv is not None:
             assert INameServer.providedBy(nameserv)
@@ -151,7 +157,10 @@ class CASTCP(StatefulProtocol):
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
+        self.transport.bufferFull = False # flag used by PVSearch
         self.pmux = MuxProducer(self.transport)
+        C = self.pmux.getConsumer()
+        C.registerProducer(self, True)
         msg = caheader.pack(0, 0, self.prio, caproto.VERSION, 0, 0)
         self.transport.write(msg)
 
@@ -166,6 +175,13 @@ class CASTCP(StatefulProtocol):
         self.__channels = None
         self.pmux = None
 
+    def resumeProducing(self):
+        self.transport.bufferFull = False
+    def pauseProducing(self):
+        self.transport.bufferFull = True
+    def stopProducing(self):
+        self.transport.bufferFull = True
+
     def getInitialState(self):
         """Entry point for message processing state machine.
         """
@@ -175,7 +191,7 @@ class CASTCP(StatefulProtocol):
         """Begin message processing with short header
         """
         cmd, blen, dtype, dcount, p1, p2 = caheader.unpack(data)
-        
+
         if blen==0:
             # short message w/o payload.  Dispatch directly
             self.__process(cmd, dtype, dcount, p1, p2, payload='')
@@ -293,11 +309,17 @@ class CASTCP(StatefulProtocol):
                         (cmd, dtype, dcount, p1, p2), chan)
             return
 
+    def __lookup(self, cmd, reply, ver, cid, cid2, payload):
+        pv = str(payload).strip('\0')
+        search = PVSearch(cid, pv, None, ver, self.transport, self.localport)
+        self.nameserv.lookupPV(search)
+
     __dispatch = {
          0: __version,
          1: __dispatchP1, # event add
          2: __dispatchP1, # event del
          4: __dispatchP1, # Write
+         6: __lookup,
         12: __clear,
         15: __dispatchP1, # Read w/ notify
         18: __create,

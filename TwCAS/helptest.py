@@ -54,7 +54,7 @@ class TestTCPTransport:
         self.defer = Deferred()
         self.rxbuffer = []
 
-    def write(self, data):
+    def write(self, data, _=None):
         if self.rxneeded==1:
             D, self.defer = self.defer, Deferred()
             D.callback(data)

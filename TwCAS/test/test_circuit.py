@@ -7,6 +7,8 @@ Created on Sun Jul 29 20:01:56 2012
 
 from zope.interface import implements
 
+import struct
+
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet import reactor
@@ -76,7 +78,7 @@ class TestConnect(unittest.TestCase):
 
     def setUp(self):
         self.nameserv = TestServer()
-        self.proto = tcpserver.CASTCP(self.nameserv, prio=6)
+        self.proto = tcpserver.CASTCP(self.nameserv, prio=6, localport=1423)
         self.transport = helptest.TestTCPTransport()
 
     def test_version(self):
@@ -115,7 +117,7 @@ class TestCASChannel(unittest.TestCase):
 
     def setUp(self):
         self.serv = TestServer()
-        self.proto = tcpserver.CASTCP(self.serv, prio=6)
+        self.proto = tcpserver.CASTCP(self.serv, prio=6, localport=1423)
         self.transport = helptest.TestTCPTransport()
         self.proto.makeConnection(self.transport)
 
@@ -202,3 +204,28 @@ class TestCASChannel(unittest.TestCase):
         self.assertEqual(dcount, 1)
         self.assertEqual(p1, chan.sid)
         self.assertEqual(p2, 5678)
+
+    @inlineCallbacks
+    def test_lookup(self):
+        D = Deferred()
+        self.serv.lookupPV = D.callback        
+        
+        msg = helptest.makeCA(6, dtype=5, dcount=10, p1=4242, p2=4242,
+                              body=caproto.padMsg('helloworld'))
+
+        self.proto.dataReceived(msg)
+        
+        request = yield D
+
+        self.assertEqual(request.pv, 'helloworld')
+        
+        D = self.transport.defer
+        
+        request.claim()
+
+        data = yield D
+        
+        ebody = struct.pack('!Hxxxxxx', caproto.VERSION)
+        msg, remainder = helptest.checkCA(self, data, cmd=6, bodylen=8,
+                                          dtype=1423, dcount=0, p1=0xffffffff,
+                                          p2=4242, body=ebody)
