@@ -67,3 +67,24 @@ def makePair(protoA, protoB=None, reactor=reactor):
     SF.done()
     
     returnValue((A,B))
+
+def closeAll(protos, close=False):
+    """Close all protocols passed.
+    
+    Returns a deferred which fires after connectionLost()
+    has been called for all protocols.
+    """
+    L = []
+    for P in protos:
+        D = Deferred()
+        CL = P.connectionLost
+        def onLoss(reason, D=D):
+            assert not D.called
+            CL()
+            D.callback(P)
+        P.connectionLost=onLoss
+        if close:
+            P.transport.loseConnection()
+        L.append(D)
+
+    return DeferredList(L)
