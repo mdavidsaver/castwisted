@@ -22,15 +22,19 @@ class PutNotify(object):
     def __del__(self):
         self.error(ECA.ECA_PUTFAIL)
 
-    def done(self):
-        self.error(ECA.ECA_NORMAL)
+    @property
+    def channel(self):
+        return self.__chan()
+
+    def finish(self):
+        return self.error(ECA.ECA_NORMAL)
 
     def error(self, eca):
         chan = self.__chan()
         if chan is None:
             return False
 
-        msg = caproto.caheader(19, 0, self.dbr, self.dcount, eca, self.subid)
+        msg = caproto.caheader.pack(19, 0, self.dbr, self.dcount, eca, self.subid)
         
         #Note: PutNoify replies are never dropped.
         chan.getCircuit().write(msg)
@@ -185,7 +189,7 @@ class Channel(object):
 
         msg = caproto.caheader.pack(1, 0, sub.dbr, sub.dcount, self.sid, sub.subid)
         
-        self.getCircuit().transport.write(msg)
+        self.getCircuit().write(msg)
         
         sub._close()
 
@@ -203,7 +207,7 @@ class Channel(object):
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
-        self.pv.put(dtype, dcount, payload)
+        self.pv.put(dtype, dcount, payload, None)
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass
