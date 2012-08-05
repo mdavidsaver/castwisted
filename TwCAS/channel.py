@@ -134,7 +134,21 @@ class Channel(object):
         self.__subscriptions = {}
 
     def channelClosed(self):
+        """Close due to circuit loss
+        """
         self.__proto = None # release strong reference (ref loop broken)
+
+    def close(self):
+        """Close and notify client
+        """
+        self.__proto.dropChannel(self)
+        msg = caproto.caheader.pack(27, 0, 0, 0, self.cid, 0)
+        self.__proto.transport.write(msg)
+        
+        for S in self.__subscriptions.itervalues():
+            S._close()
+
+        self.channelClosed()
 
     def messageReceived(self, cmd, dtype, dcount, p1, p2, payload):
         if cmd == 2:

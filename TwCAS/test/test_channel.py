@@ -9,12 +9,16 @@ from TwCAS.interface import IPVRequest, IPVDBR
 
 from TwCAS import channel as chan
 
-from TwCAS import helptest, caproto, ECA
+from TwCAS import helptest, ECA
 
 class MockCircuit(object):
     paused = False
+    dropped = None
     def __init__(self):
         self.transport = helptest.TestTCPTransport()
+
+    def dropChannel(self, chan):
+        self.dropped = chan
 
     @property
     def defer(self):
@@ -53,12 +57,15 @@ class MockPV(object):
 
 class TestLifecycle(unittest.TestCase):
 
+    timeout = 1.0
+
     def setUp(self):
-        self.request = MockRequest(pv='hello', sid=5, cid=17,
+        self.pv = MockPV()
+        self.request = MockRequest(pv=self.pv, sid=5, cid=17,
                                    client=('127.0.0.2', 4231),
                                    clientVersion=10)
+        self.transport = self.request.getCircuit()
 
-        self.pv = MockPV()
     
 
     def test_openclose(self):
@@ -66,12 +73,27 @@ class TestLifecycle(unittest.TestCase):
 
         C.channelClosed()
 
-class TestGet(unittest.TestCase):
+    @inlineCallbacks
+    def test_forceclose(self):
+        C = chan.Channel(self.request, self.pv)
+        
+        D = self.transport.defer
+        
+        C.close()
+        
+        self.assertIdentical(C, self.request._circuit.dropped)
+
+        data = yield D
+        
+        helptest.checkCA(self, data, cmd=27, dtype=0, dcount=0,
+                         p1=self.request.cid, p2=0, bodylen=0,
+                         final=True)
+
+class TestOperations(unittest.TestCase):
 
     timeout = 1.0
 
     def setUp(self):
-
         self.pv = MockPV()
         self.request = MockRequest(pv=self.pv, sid=5, cid=17,
                                    client=('127.0.0.2', 4231),
