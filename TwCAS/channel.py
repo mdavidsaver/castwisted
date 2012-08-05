@@ -18,9 +18,14 @@ class PutNotify(object):
         self.__chan = weakref.ref(chan)
         self.dbr, self.dcount = dbr, dcount
         self.subid = subid
+        self.complete = False
 
     def __del__(self):
         self.error(ECA.ECA_PUTFAIL)
+
+    def _close(self):
+        self._chan = lambda:None
+        self.complete = True
 
     @property
     def channel(self):
@@ -31,7 +36,7 @@ class PutNotify(object):
 
     def error(self, eca):
         chan = self.__chan()
-        if chan is None:
+        if chan is None or self.complete:
             return False
 
         msg = caproto.caheader.pack(19, 0, self.dbr, self.dcount, eca, self.subid)
@@ -39,6 +44,7 @@ class PutNotify(object):
         #Note: PutNoify replies are never dropped.
         chan.getCircuit().write(msg)
         self.__chan = lambda:None
+        self.complete = True
         return True
 
 
@@ -54,6 +60,8 @@ class SendData(object):
             return
         # Attempt to ensure that get response is sent even if this
         # request is discarded without action.
+        #TODO: Need to be able to determine payload size from
+        # dbrtype and dcount
 
     @property
     def channel(self):
@@ -132,10 +140,23 @@ class Channel(object):
         self.__Qmax = qsize
         
         self.__subscriptions = {}
+        self.__operations = weakref.WeakValueDictionary()
+
+    @property
+    def active(self):
+        return self.__proto is not None
 
     def channelClosed(self):
         """Close due to circuit loss
         """
+        
+        for S in self.__subscriptions.itervalues():
+            S._close()
+        self.__subscriptions.clear()
+        for O in list(self.__operations.values()):
+            O._close()
+        self.__operations.clear()
+            
         self.__proto = None # release strong reference (ref loop broken)
 
     def close(self):
@@ -144,11 +165,11 @@ class Channel(object):
         self.__proto.dropChannel(self)
         msg = caproto.caheader.pack(27, 0, 0, 0, self.cid, 0)
         self.__proto.transport.write(msg)
-        
-        for S in self.__subscriptions.itervalues():
-            S._close()
 
         self.channelClosed()
+
+    def _opComplete(self, op):
+        self.__operations.pop(id(op), None)
 
     def messageReceived(self, cmd, dtype, dcount, p1, p2, payload):
         if cmd == 2:
@@ -210,12 +231,16 @@ class Channel(object):
     def __getnotify(self, cmd, dtype, dcount, p1, p2, payload):
 
         get = GetNotify(self, p2, dtype, dcount)
+        
+        self.__operations[id(get)] = get
 
         self.pv.get(get)
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
         put = PutNotify(self, p2, dtype, dcount)
+
+        self.__operations[id(put)] = put
         
         self.pv.put(dtype, dcount, payload, put)
 
