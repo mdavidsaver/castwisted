@@ -163,14 +163,18 @@ class CASTCP(StatefulProtocol):
         self.__channels = None
 
     def getInitialState(self):
+        """Entry point for message processing state machine.
+        """
         return (self.header1, caheader.size)
 
     def header1(self, data):
+        """Begin message processing with short header
+        """
         cmd, blen, dtype, dcount, p1, p2 = caheader.unpack(data)
         
         if blen==0:
             # short message w/o payload.  Dispatch directly
-            self.__dispatch.get(cmd, self.__ignore)(self, cmd, dtype, dcount, p1, p2, payload='')
+            self.__process(cmd, dtype, dcount, p1, p2, payload='')
             return None # Next packet
 
         self.__header = (cmd, blen, dtype, dcount, p1, p2)
@@ -182,6 +186,8 @@ class CASTCP(StatefulProtocol):
             return (self.payload, blen)
 
     def header2(self, data):
+        """Process extended header for large messages
+        """
         cmd, blen, dtype, dcount, p1, p2 = self.__header
         
         blen, dcount = caheaderext.unpack(data)
@@ -191,18 +197,23 @@ class CASTCP(StatefulProtocol):
         return (self.payload, blen)
 
     def payload(self, data):
+        """Process message payload
+        """
         cmd, blen, dtype, dcount, p1, p2 = self.__header
         self.__header = None
 
+        self.__process(cmd, dtype, dcount, p1, p2, payload=data)
+
+        return (self.header1, caheader.size)
+
+    def __process(self, cmd, *args, **kws):
         try:
-            self.__dispatch.get(cmd, self.__ignore)(self, cmd, dtype, dcount, p1, p2, payload=data)
+            self.__dispatch.get(cmd, self.__ignore)(self, cmd, *args, **kws)
         except caproto.CAProtoFault,e:
             L.fatal('Connection from %s closed after protocol error', self.transport.getPeer())
             self.transport.loseConnection()
         except:
             L.exception('Error processing message %d from: %s', cmd, self.transport.getPeer())
-
-        return (self.header1, caheader.size)
 
     def __ignore(self, cmd, *args):
         L.debug('Unexpected message %d from %s', cmd, self.transport.getPeer())
@@ -261,11 +272,12 @@ class CASTCP(StatefulProtocol):
             chan.channelClosed()
 
     def __dispatchP1(self, cmd, dtype, dcount, p1, p2, payload):
-        """Dispatch to appropriate channel
+        """Dispatch to appropriate channel using SID stored in P1 field
         """
         chan = self.__channels.get(p1, None)
         if chan is None:
-            self.__fail(None, cmd, dtype, dcount, p1, p2, payload)
+            L.error("Client innitiated operation on unknown channel: %s",
+                    (cmd, dtype, dcount, p1, p2))
             return
 
         try:
@@ -273,7 +285,8 @@ class CASTCP(StatefulProtocol):
         except caproto.CAProtoFault:
             raise
         except:
-            self.__fail(chan, cmd, dtype, dcount, p1, p2, payload)
+            L.exception("Exception for message %s sent to channel %s",
+                        (cmd, dtype, dcount, p1, p2), chan)
             return
 
     __dispatch = {
@@ -288,8 +301,3 @@ class CASTCP(StatefulProtocol):
         20: __user,
         21: __host
     }
-
-    def __fail(self, chan, cmd, dtype, dcount, p1, p2, payload):
-        """Try to notify the client that things didn't work so well...
-        """
-        pass
