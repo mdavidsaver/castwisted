@@ -46,13 +46,27 @@ class TestUDPTransport:
 class TestTCPTransport:
     implements(ITCPTransport, IConsumer)
     disconnecting = False
+    paused = False
+    
+    rxneeded = 1
 
     def __init__(self):
         self.defer = Deferred()
+        self.rxbuffer = []
 
     def write(self, data):
-        D, self.defer = self.defer, Deferred()
-        D.callback(data)
+        if self.rxneeded==1:
+            D, self.defer = self.defer, Deferred()
+            D.callback(data)
+            return
+            
+        self.rxbuffer.append(data)
+        if len(self.rxbuffer)>=self.rxneeded:
+            data = ''.join(self.rxbuffer)
+            self.rxbuffer = []
+            D, self.defer = self.defer, Deferred()
+            D.callback(data)
+            
 
     def loseConnection(self):
         self.disconnecting = True

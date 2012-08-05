@@ -5,13 +5,38 @@ import logging
 L = logging.getLogger('TwCAS.protocol')
 
 from zope.interface import implements
-from interfaces import IChannel
+from interface import IChannel
 
 from twisted.internet import reactor
 
 import ECA
 
 import caproto
+
+class PutNotify(object):
+    def __init__(self, chan, subid, dbr, dcount):
+        self.__chan = weakref.ref(chan)
+        self.dbr, self.dcount = dbr, dcount
+        self.subid = subid
+
+    def __del__(self):
+        self.error(ECA.ECA_PUTFAIL)
+
+    def done(self):
+        self.error(ECA.ECA_NORMAL)
+
+    def error(self, eca):
+        chan = self.__chan()
+        if chan is None:
+            return False
+
+        msg = caproto.caheader(19, 0, self.dbr, self.dcount, eca, self.subid)
+        
+        #Note: PutNoify replies are never dropped.
+        chan.getCircuit().write(msg)
+        self.__chan = lambda:None
+        return True
+
 
 class SendData(object):
     def __init__(self, chan, subid, dbr, dcount, mask=-1):
@@ -23,8 +48,8 @@ class SendData(object):
     def __del__(self):
         if self.complete or not self.once:
             return
-        # Ensure that get response is sent even if this request is discarded
-        # without action
+        # Attempt to ensure that get response is sent even if this
+        # request is discarded without action.
 
     @property
     def channel(self):
@@ -34,10 +59,15 @@ class SendData(object):
         self.__chan = lambda:None
         self.complete = True
 
-    def update(self, data, dcount):
-        if self.complete:
-            return
+    def error(self, eca):
+        pass
+
+    def update(self, data, dcount, eca=ECA.ECA_NORMAL):
+        """Send DBR data to client
+        """
         chan = self.channel
+        if self.complete or chan is None or chan.getCircuit().paused:
+            return False
         
         if self.dcount or chan.peerVersion<13:
             # Fixed size array
@@ -54,18 +84,20 @@ class SendData(object):
         if len(data)>=0xffff or dcount>=0xffff:
             #Large payload
             msg = caproto.caheaderlarge.pack(self.catype, 0xffff, self.dbr,
-                                             0, ECA.ECA_NORMAL, self.subid,
+                                             0, eca, self.subid,
                                              len(data), dcount)
         else:
             msg = caproto.caheader.pack(self.catype, len(data), self.dbr, dcount,
-                                        ECA.ECA_NORMAL, self.subid)
+                                        eca, self.subid)
 
-        T = chan.getCircuit().transport
+        T = chan.getCircuit()
         T.write(msg)
         T.write(data)
         
         if self.once:
             self._close()
+
+        return True
 
 class Subscription(SendData):
     catype = 1
@@ -158,16 +190,20 @@ class Channel(object):
         sub._close()
 
     def __getnotify(self, cmd, dtype, dcount, p1, p2, payload):
-        
+
         get = GetNotify(self, p2, dtype, dcount)
-        
+
         self.pv.get(get)
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
-        pass
+        # TODO: Check consistency of len(payload) and dtype+dcount
+        put = PutNotify(self, p2, dtype, dcount)
+        
+        self.pv.put(dtype, dcount, payload, put)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
-        pass
+        # TODO: Check consistency of len(payload) and dtype+dcount
+        self.pv.put(dtype, dcount, payload)
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass
