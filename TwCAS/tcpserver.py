@@ -11,10 +11,11 @@ L = logging.getLogger('TwCAS.protocol')
 
 from zope.interface import implements
 
-from twisted.internet.protocol import connectionDone
+from twisted.internet.protocol import connectionDone, ServerFactory
 from twisted.protocols.stateful import StatefulProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
+from twisted.internet import reactor
 
 from interface import INameServer, IPVServer, IPVRequest
 
@@ -336,4 +337,21 @@ class CASTCP(StatefulProtocol):
             return u'Circuit(OPENING)'
         else:
             return u'Circuit(CLOSED)'
-            
+
+class CASTCPServer(ServerFactory):
+    def __init__(self, port, pvserver, prio=0, interface='',
+                 nameserv=None, reactor=reactor):
+
+        self.__circuits = weakref.WeakValueDictionary
+        self.__listener = reactor.listenTCP(port, self, backlog=10,
+                                            interface=interface)
+
+    def close(self):
+        self.__listener.stopListening()
+        for C in self.__circuit.values():
+            if C.connected:
+                C.transport.loseConnection()
+
+    def buildProtocol(self, addr):
+        proto = ServerFactory.buildProtocol(self, addr)
+        self.__circuits[id(proto)]=proto
