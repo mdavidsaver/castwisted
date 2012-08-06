@@ -2,7 +2,7 @@
 
 from twisted.trial import unittest
 
-from TwCAS.util import mailboxpv
+from TwCAS.util import pvs
 from TwCAS import ECA
 
 class MockDataRequest(object):
@@ -24,7 +24,7 @@ class MockDataRequest(object):
 class TestBasic(unittest.TestCase):
     
     def setUp(self):
-        self.pv = mailboxpv.MailboxPV(firstdbf=1)
+        self.pv = pvs.MailboxPV(firstdbf=1)
 
     def test_geterr(self):
         R = MockDataRequest(dbr=5)

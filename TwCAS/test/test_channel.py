@@ -65,7 +65,7 @@ class TestLifecycle(unittest.TestCase):
         self.pv = MockPV()
         self.request = MockRequest(pv=self.pv, sid=5, cid=17,
                                    client=('127.0.0.2', 4231),
-                                   clientVersion=10)
+                                   clientVersion=10, clientUser='someone')
         self.transport = self.request.getCircuit()
 
     
@@ -99,7 +99,7 @@ class TestOperations(unittest.TestCase):
         self.pv = MockPV()
         self.request = MockRequest(pv=self.pv, sid=5, cid=17,
                                    client=('127.0.0.2', 4231),
-                                   clientVersion=10)
+                                   clientVersion=10, clientUser='someone')
         self.chan = chan.Channel(self.request, self.pv)
         self.transport = self.request.getCircuit()
 
@@ -230,7 +230,7 @@ class TestShutdown(unittest.TestCase):
         self.pv = MockPV()
         self.request = MockRequest(pv=self.pv, sid=5, cid=17,
                                    client=('127.0.0.2', 4231),
-                                   clientVersion=10)
+                                   clientVersion=10, clientUser='someone')
         self.chan = chan.Channel(self.request, self.pv)
         self.transport = self.request.getCircuit()
 
