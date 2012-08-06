@@ -224,6 +224,10 @@ class Channel(object):
         
         self.__subscriptions[sub.subid] = sub
         
+        if self.rights&1==0:
+            sub.error(ECA.ECA_NORDACCESS)
+            return
+        
         self.pv.monitor(sub)
 
     def __eventcancel(self, cmd, dtype, dcount, p1, p2, payload):
@@ -242,6 +246,10 @@ class Channel(object):
 
         get = GetNotify(self, p2, dtype, dcount)
         
+        if self.rights&1==0:
+            get.error(ECA.ECA_NORDACCESS)
+            return
+        
         self.__operations[id(get)] = get
 
         self.pv.get(get)
@@ -250,12 +258,18 @@ class Channel(object):
         # TODO: Check consistency of len(payload) and dtype+dcount
         put = PutNotify(self, p2, dtype, dcount)
 
+        if self.rights&2==0:
+            put.error(ECA.ECA_NOWTACCESS)
+            return
+
         self.__operations[id(put)] = put
         
         self.pv.put(dtype, dcount, payload, put)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
+        if self.rights&2==0:
+            return
         self.pv.put(dtype, dcount, payload, None)
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
