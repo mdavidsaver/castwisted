@@ -42,24 +42,10 @@ class MailboxPV(object):
             return
         meta = '\0'*mlen
 
-        if request.dynamic:
-            # dynamic array.  so return what we have
-            data = self.value
-            dcount = self.count
-        else:
-            # always give the requested size
-            dlen = DBR.dbr_size(dbf, request.dcount)
-            if dlen > len(self.value):
-                # zero pad
-                data = self.value + '\0'*(dlen-len(self.value))
-            elif dlen < len(self.value):
-                # truncate
-                data = self.value[:dlen]
-            else:
-                data = self.value
-            dcount = request.dcount
+        data = self.value
+        dcount = self.count
 
-        # it is slightly more efficent to add the padding
+        # it may be slightly more efficent to add the padding
         # when concatinating meta to data
         pad = caproto.pad(len(meta)+len(data))
 

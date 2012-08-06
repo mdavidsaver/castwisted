@@ -34,7 +34,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(R.eca, ECA.ECA_NOCONVERT)
 
     def test_get(self):
-        R = MockDataRequest(dbr=1, dcount=1, dynamic=False)
+        R = MockDataRequest(dbr=1, dcount=1)
         
         self.pv.get(R)
 
@@ -68,37 +68,19 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(self.pv.count, 2)
 
     def test_monitor(self):
-        M1 = MockDataRequest(dbr=1, dcount=1, dynamic=False)
-        M2 = MockDataRequest(dbr=1, dcount=0, dynamic=True)
-        M3 = MockDataRequest(dbr=1, dcount=3, dynamic=False)
+        M1 = MockDataRequest(dbr=1, dcount=1)
 
         self.pv.monitor(M1)
-        self.pv.monitor(M2)
-        self.pv.monitor(M3)
 
         self.assertEqual(M1.eca, None)
         self.assertEqual(M1.result, ('\0'*8, 1))
         M1.reset()
-        self.assertEqual(M2.eca, None)
-        self.assertEqual(M2.result, ('\0'*8, 1))
-        M2.reset()
-        self.assertEqual(M3.eca, None)
-        self.assertEqual(M3.result, ('\0'*8, 3))
-        M3.reset()
 
         self.pv.put(1, 2, '\1\2\3\4', None)
 
         # only the first element
         self.assertEqual(M1.eca, None)
-        self.assertEqual(M1.result, ('\1\2\0\0\0\0\0\0', 1))
-
-        # both elements
-        self.assertEqual(M2.eca, None)
-        self.assertEqual(M2.result, ('\1\2\3\4\0\0\0\0', 2))
-
-        # both elements and a padding element
-        self.assertEqual(M3.eca, None)
-        self.assertEqual(M3.result, ('\1\2\3\4\0\0\0\0', 3))
+        self.assertEqual(M1.result, ('\1\2\3\4\0\0\0\0', 2))
 
     def test_monitorerror(self):
         M1 = MockDataRequest(dbr=4, dcount=1, dynamic=False)
