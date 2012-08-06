@@ -79,3 +79,29 @@ class MailboxPV(object):
         L.debug('%s monitor dbr:%d', self, request.dbr)
         self.get(request)
         self.__monitors[id(request)]=request
+
+class ClientInfo(object):
+    """A PV which tells the client something about itself
+    """
+    implements(IPVDBR)
+
+    def getInfo(self, request):
+        return (0, 1, 1)
+
+    def get(self, request):
+        if request.dbf != 0:
+            request.error(ECA.ECA_NOCONVERT)
+            return
+
+        chan = request.channel
+        host, port = chan.client
+        user = chan.clientUser
+        
+        msg = '%s%s on %s:%d' %('\0'*request.metaLen, user, host, port)
+        msg = msg[:40]
+        print 'send',msg
+        msg += '\0'*(40-len(msg))
+        request.update(msg, 1)
+
+    def monitor(self, request):
+        self.get(request)

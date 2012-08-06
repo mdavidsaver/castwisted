@@ -37,6 +37,7 @@ class PVConnect(object):
         self.pv = pvname
         self.client = client
         self.clientVersion = proto.peerVersion
+        self.clientUser = proto.peerUser
         self.__replied = False
 
     def __del__(self):

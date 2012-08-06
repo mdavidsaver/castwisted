@@ -52,7 +52,7 @@ class SendData(object):
     def __init__(self, chan, subid, dbr, dcount, mask=-1):
         self.__chan = weakref.ref(chan)
         self.dbr, self.dcount = dbr, min(dcount, chan.maxCount)
-        self.dbf, self.__mlen = DBR.dbr_info(dbr)
+        self.dbf, self.metaLen = DBR.dbr_info(dbr)
         self.__maxlen = DBR.dbr_size(dbr, chan.maxCount)
         self.subid, self.mask = subid, mask
         self.complete = False
@@ -140,6 +140,7 @@ class Channel(object):
         self.sid = request.sid
         self.client = request.client
         self.clientVersion = request.clientVersion
+        self.clientUser = request.clientUser
         
         self.dbr, self.maxCount, self.rights = PV.getInfo(request)
         
@@ -208,7 +209,7 @@ class Channel(object):
         return self.__proto.pmux
 
     def getPeer(self):
-        return self.__proto.transport.getPeer()
+        return self.client
 
     def __eventadd(self, cmd, dtype, dcount, p1, p2, payload):
         if p2 in self.__subscriptions:

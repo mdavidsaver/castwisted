@@ -10,11 +10,11 @@ from twisted.application.service import IServiceMaker
 from twisted.application import internet, service
 
 from TwCAS import tcpserver, udpserver
-from TwCAS.util import staticserver, mailboxpv
+from TwCAS.util import staticserver, pvs
 
 class Options(usage.Options):
     optParameters = [["port", "p", 5064, "CA Server port"],
-                     ["pv", '', 'mailbox', "PV Name"],
+                     ["prefix", 'P', '', "PV Name prefix"],
                      ["count", "c", 1, "Max element count"]
                     ]
 
@@ -31,9 +31,13 @@ class Maker(object):
         
         server = staticserver.StaticPVServer()
         
-        pv = mailboxpv.MailboxPV(maxCount=int(options['count']))
+        prefix = options['prefix']
         
-        server.add(options['pv']+'.VAL', pv)
+        pv = pvs.MailboxPV(maxCount=int(options['count']))
+        server.add(prefix+'mailbox.VAL', pv)
+        
+        pv = pvs.ClientInfo()
+        server.add(prefix+'whoami.VAL', pv)
         
         port = int(options['port'])
         
