@@ -18,7 +18,7 @@ class MuxConsumer(object):
         self.producer = None
         self.stream = False
 
-        self.write = self.__writer._write
+        self.write = self.__writer.write
 
     def registerProducer(self, producer, streaming):
         assert self.producer is None, "Producer already registered"
@@ -49,7 +49,7 @@ class MuxProducer(object):
         self.consumer = consumer
         self.consumer.registerProducer(self, True)
 
-        self._write = self.consumer.write
+        self.write = self.consumer.write
 
     @property
     def paused(self):
@@ -66,6 +66,7 @@ class MuxProducer(object):
             C.producer.stopProducing()
 
         self._waiters = []
+        self.write = lambda X:None
 
     def getConsumer(self):
         assert self.consumer is not None

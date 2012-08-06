@@ -37,6 +37,9 @@ class MailboxPV(object):
 
     def get(self, request):
         dbf, mlen = DBR.dbr_info(request.dbr)
+
+        L.debug('%s get dbr:%d', self, request.dbr)
+        
         if dbf != self.dbf:
             request.error(ECA.ECA_NOCONVERT)
             return
@@ -54,6 +57,8 @@ class MailboxPV(object):
     def put(self, dtype, dcount, dbrdata, reply):
         dbf, mlen = DBR.dbr_info(dtype)
 
+        L.debug('%s put dbr:%d', self, dtype)
+
         self.dbf = dbf
         #self.__meta = dbrdata[:mlen]
         self.value = dbrdata[mlen:]
@@ -67,5 +72,7 @@ class MailboxPV(object):
             reply.finish()
 
     def monitor(self, request):
+
+        L.debug('%s monitor dbr:%d', self, request.dbr)
         self.get(request)
         self.__monitors[id(request)]=request

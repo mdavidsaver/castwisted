@@ -11,11 +11,11 @@ L = logging.getLogger('TwCAS.protocol')
 
 from zope.interface import implements
 
-from twisted.internet.protocol import connectionDone, ServerFactory
+from twisted.internet.error import ConnectionDone
+from twisted.internet.protocol import ServerFactory
 from twisted.protocols.stateful import StatefulProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet import reactor
 
 from interface import INameServer, IPVServer, IPVRequest
 
@@ -155,6 +155,7 @@ class CASTCP(StatefulProtocol):
             self.transport.write(msg)
 
     def connectionMade(self):
+        L.debug('Open Connection from %s', self.transport.getPeer())
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
@@ -166,7 +167,8 @@ class CASTCP(StatefulProtocol):
         self.transport.write(msg)
 
     def connectionLost(self, reason):
-        if reason is connectionDone:
+        L.debug('Close Connection from %s', self.transport.getPeer())
+        if reason.check(ConnectionDone):
             self.onShutdown.callback(None)
         else:
             self.onShutdown.errback(reason)
@@ -236,13 +238,17 @@ class CASTCP(StatefulProtocol):
         except:
             L.exception('Error processing message %d from: %s', cmd, self.transport.getPeer())
 
-    def __ignore(self, cmd, *args):
-        L.debug('Unexpected message %d from %s', cmd, self.transport.getPeer())
+    def __ignore(self, junk, cmd, *args, **kws):
+        L.debug('Unexpected TCP message %d from %s', cmd, self.transport.getPeer())
+
+    def __echo(self, cmd, dtype, dcount, p1, p2, payload):
+        msg = caproto.caheader.pack(23, 0, 0, 0, 0, 0)
+        self.transport.write(msg)
 
     def __version(self, cmd, dtype, dcount, p1, p2, payload):
         self.prio = max(self.prio, dtype)
         self.peerVersion = dcount
-        L.info('%s has version %d and wants priority', self.transport.getPeer(), dcount, dtype)
+        L.info('%s has version %d and wants priority %d', self.transport.getPeer(), dcount, dtype)
 
     def __user(self, cmd, dtype, dcount, p1, p2, payload):
         self.peerUser = str(payload).strip('\0')
@@ -326,7 +332,8 @@ class CASTCP(StatefulProtocol):
         18: __create,
         19: __dispatchP1, # Write w/ notify
         20: __user,
-        21: __host
+        21: __host,
+        23: __echo
     }
 
     def __unicode__(self):
@@ -339,12 +346,12 @@ class CASTCP(StatefulProtocol):
             return u'Circuit(CLOSED)'
 
 class CASTCPServer(ServerFactory):
-    def __init__(self, port, pvserver, prio=0, interface='',
-                 nameserv=None, reactor=reactor):
-
-        self.__circuits = weakref.WeakValueDictionary
-        self.__listener = reactor.listenTCP(port, self, backlog=10,
-                                            interface=interface)
+    def __init__(self, port, pvserver, prio=0, nameserv=None):
+        self.__circuits = weakref.WeakValueDictionary()
+        self.localport = port
+        self.pvserver = pvserver
+        self.nameserv = nameserv
+        L.info('CA TCP server factory starting')
 
     def close(self):
         self.__listener.stopListening()
@@ -353,5 +360,8 @@ class CASTCPServer(ServerFactory):
                 C.transport.loseConnection()
 
     def buildProtocol(self, addr):
-        proto = ServerFactory.buildProtocol(self, addr)
+        L.debug('Building connection from %s',addr)
+        proto = CASTCP(self.pvserver, prio=0, nameserv=self.nameserv,
+                       localport=self.localport)
         self.__circuits[id(proto)]=proto
+        return proto

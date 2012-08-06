@@ -5,11 +5,11 @@ L = logging.getLogger('TwCAS.staticserver')
 
 from zope.interface import implements
 
-from interface import INameServer, IPVServer, IPVDBR
+from TwCAS.interface import INameServer, IPVServer, IPVDBR
 
 from collections import defaultdict
 
-from channel import Channel
+from TwCAS.channel import Channel
 
 class StaticPVServer(object):
     """Serves from a pre-defined list of PVs
@@ -60,7 +60,7 @@ class StaticPVServer(object):
         
         Returns ('pvname', 'channel options')
         """
-        rec, right = name.partition('.')
+        rec, sep, right = name.partition('.')
         if len(right):
             #TODO: Slow
             fld, extra = right, ''
@@ -79,6 +79,7 @@ class StaticPVServer(object):
 
     def lookupPV(self, search):
         name, extra = self.splitPvName(search.pv)
+        L.debug('Lookup %s'%name)
         if name in self._pvs:
             search.claim()
         else:
@@ -86,6 +87,7 @@ class StaticPVServer(object):
 
     def connectPV(self, request):
         name, extra = self.splitPvName(request.pv)
+        L.debug('Connect %s'%name)
         pv = self._pvs.get(name, None)
         if pv is None:
             request.disclaim()
@@ -102,3 +104,4 @@ class StaticPVServer(object):
         chan.options = extra
 
         self._channels[name].append(chan)
+        return chan

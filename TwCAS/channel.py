@@ -135,7 +135,7 @@ class Channel(object):
     def __init__(self, request, PV, qsize=4):
         self.__proto = request.getCircuit() # take strong reference (ref loop created)
         assert self.__proto is not None
-        self.pv = request.pv
+        self.pv = PV
         self.cid = request.cid
         self.sid = request.sid
         self.client = request.client

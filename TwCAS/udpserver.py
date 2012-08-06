@@ -116,8 +116,8 @@ class CASUDP(DatagramProtocol):
         search = PVSearch(cid, pv, endpoint, ver, self.transport, self.localport)
         self.nameserv.lookupPV(search)
 
-    def __ignore(self, endpoint, cmd, *args, **kws):
-        L.debug('Unexpected message %d from %s', cmd, endpoint)
+    def __ignore(self, junk, endpoint, cmd, *args, **kws):
+        L.debug('Unexpected UDP message %d from %s', cmd, endpoint)
 
     __actions={0:__version, 6:__lookup}
     
