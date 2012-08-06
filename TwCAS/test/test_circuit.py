@@ -11,7 +11,7 @@ import struct
 
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, inlineCallbacks
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 
 from TwCAS.interface import INameServer, IPVServer, IChannel, IPVDBR
 
@@ -87,7 +87,7 @@ class TestConnect(unittest.TestCase):
         def haveVersion(data):
             checkCA(self, data, cmd=0, dtype=6, dcount=caproto.VERSION, p1=0, p2=0)
 
-            self.proto.connectionLost(reason=tcpserver.connectionDone)
+            self.proto.connectionLost(reason=protocol.connectionDone)
             return self.proto.onShutdown
 
         D = self.transport.defer
