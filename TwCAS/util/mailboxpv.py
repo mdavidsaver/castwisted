@@ -66,7 +66,9 @@ class MailboxPV(object):
         self.count = dcount
 
         # update monitors
-        for mon in self.__monitors.values():
+        Ms=self.__monitors.values()
+        L.debug('%s post to %d subscribers', self, len(Ms))
+        for mon in Ms:
             self.get(mon)
 
         if reply:
