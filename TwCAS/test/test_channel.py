@@ -112,7 +112,7 @@ class TestOperations(unittest.TestCase):
         
         self.pv.get = D.callback
         
-        self.chan.messageReceived(cmd=15, dtype=0, dcount=1,
+        self.chan.messageReceived(cmd=15, dtype=1, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='')
         
@@ -127,7 +127,7 @@ class TestOperations(unittest.TestCase):
 
         msg = yield D
 
-        helptest.checkCA(self, msg, cmd=15, dtype=0, dcount=1,
+        helptest.checkCA(self, msg, cmd=15, dtype=1, dcount=1,
                          p1=ECA.ECA_NORMAL, p2=10000,
                          body='\0'*8, bodylen=8, hasdbr=True, final=True)
 
@@ -182,7 +182,7 @@ class TestOperations(unittest.TestCase):
         
         self.pv.monitor = D.callback
 
-        self.chan.messageReceived(cmd=1, dtype=0, dcount=1,
+        self.chan.messageReceived(cmd=1, dtype=1, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='\0'*12+'\0\3\0\0')
 
@@ -199,7 +199,7 @@ class TestOperations(unittest.TestCase):
 
             data = yield D
 
-            pkt,_ = helptest.checkCA(self, data, cmd=1, dtype=0, dcount=1,
+            pkt,_ = helptest.checkCA(self, data, cmd=1, dtype=1, dcount=1,
                                      p1=ECA.ECA_NORMAL, p2=10000,
                                      bodylen=8, hasdbr=True, final=True)
 
@@ -208,13 +208,13 @@ class TestOperations(unittest.TestCase):
         D = self.transport.defer
         self.transport.transport.rxneeded = 1
 
-        self.chan.messageReceived(cmd=2, dtype=0, dcount=1,
+        self.chan.messageReceived(cmd=2, dtype=1, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='')
 
         data = yield D
 
-        helptest.checkCA(self, data, cmd=1, dtype=0, dcount=1,
+        helptest.checkCA(self, data, cmd=1, dtype=1, dcount=1,
                          p1=self.request.sid, p2=10000, final=True)
 
         self.assertEqual(self.chan._Channel__subscriptions, {})

@@ -72,11 +72,13 @@ def dbr_info(dbr):
     """
     return _dbr_info.get(dbr, (-1, 0))
 
-def dbr_size(dtype, dcount):
-    """Compute unpadded size of encoded DBR data
+def dbr_size(dtype, dcount, pad=False):
+    """Compute size of encoded DBR data
     """
     dbf, mlen = dbr_info(dtype)
-    return mlen + dcount * dbf_element_size(dbf)
+    S = mlen + dcount * dbf_element_size(dbf)
+    pad = (8-(S%8))&7 if pad else 0
+    return S + pad
 
 def dbr_count(dtype, dbrlen):
     """Find dcount from dbr type and a given buffer size.

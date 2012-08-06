@@ -51,7 +51,9 @@ class PutNotify(object):
 class SendData(object):
     def __init__(self, chan, subid, dbr, dcount, mask=-1):
         self.__chan = weakref.ref(chan)
-        self.dbr, self.dcount = dbr, dcount
+        self.dbr, self.dcount = dbr, min(dcount, chan.maxCount)
+        self.dbf, self.__mlen = DBR.dbr_info(dbr)
+        self.__maxlen = DBR.dbr_size(dbr, chan.maxCount)
         self.subid, self.mask = subid, mask
         self.complete = False
         self.dynamic = chan.clientVersion>=13 and dcount==0
@@ -82,17 +84,23 @@ class SendData(object):
         if self.complete or chan is None or chan.getCircuit().paused:
             return False
         
-        if self.dcount or chan.peerVersion<13:
+        if not self.dynamic:
             # Fixed size array
-            C = cmp(dcount, self.dcount)
+            finalLen = DBR.dbr_size(self.dbr, self.dcount, pad=True)
+
+            C = cmp(len(data), finalLen)
             if C==-1: # dcount < self.dcount
-                pass # pad
+                data += '\0'*(finalLen - len(data)) # pad
             elif C==1: # dcount > self.dcount
-                pass # truncate
+                data = data[:finalLen] # truncate
+            dcount = self.dcount
         else:
-            # Dynamic array
-            if dcount > chan.dcount:
-                pass # truncate
+            # Dynamic array (aka self.dcount==0)
+            if len(data) > self.__maxlen:
+                # truncate to reported max size
+                data=data[:self.__maxlen]
+                dcount = DBR.dbr_count(self.dbr, len(data))
+            data=caproto.padMsg(data)
 
         if len(data)>=0xffff or dcount>=0xffff:
             #Large payload
