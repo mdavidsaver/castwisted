@@ -9,7 +9,7 @@ from interface import IChannel
 
 from twisted.internet import reactor
 
-import ECA
+import ECA, DBR
 
 import caproto
 
@@ -54,14 +54,14 @@ class SendData(object):
         self.dbr, self.dcount = dbr, dcount
         self.subid, self.mask = subid, mask
         self.complete = False
+        self.dynamic = chan.clientVersion>=13 and dcount==0
 
     def __del__(self):
         if self.complete or not self.once:
             return
         # Attempt to ensure that get response is sent even if this
         # request is discarded without action.
-        #TODO: Need to be able to determine payload size from
-        # dbrtype and dcount
+        self.error(ECA.ECA_GETFAIL)
 
     @property
     def channel(self):
@@ -72,7 +72,8 @@ class SendData(object):
         self.complete = True
 
     def error(self, eca):
-        pass
+        junk = '\0'*DBR.dbr_size(self.dbr, self.dcount)
+        self.update(junk, self.dcount, eca)
 
     def update(self, data, dcount, eca=ECA.ECA_NORMAL):
         """Send DBR data to client
