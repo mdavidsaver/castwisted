@@ -24,7 +24,8 @@ class MailboxPV(object):
     """
     implements(IPVDBR)
     
-    def __init__(self, firstdbf=0):
+    def __init__(self, firstdbf=0, maxCount=1):
+        self.maxCount = maxCount
         self.dbf = firstdbf
         self.count = 1
         self.value = '\0'*DBR.dbf_element_size(firstdbf)
@@ -33,7 +34,7 @@ class MailboxPV(object):
         self.__monitors = weakref.WeakValueDictionary()
 
     def getInfo(self, request):
-        return (self.dbf, self.count, 3)
+        return (self.dbf, self.maxCount, 3)
 
     def get(self, request):
         dbf, mlen = DBR.dbr_info(request.dbr)

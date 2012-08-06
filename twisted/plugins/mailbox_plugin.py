@@ -14,7 +14,9 @@ from TwCAS.util import staticserver, mailboxpv
 
 class Options(usage.Options):
     optParameters = [["port", "p", 5064, "CA Server port"],
-                     ["pv", '', 'mailbox', "PV Name"]]
+                     ["pv", '', 'mailbox', "PV Name"],
+                     ["count", "c", 1, "Max element count"]
+                    ]
 
 class Maker(object):
     implements(IServiceMaker, IPlugin)
@@ -29,7 +31,7 @@ class Maker(object):
         
         server = staticserver.StaticPVServer()
         
-        pv = mailboxpv.MailboxPV()
+        pv = mailboxpv.MailboxPV(maxCount=int(options['count']))
         
         server.add(options['pv']+'.VAL', pv)
         
