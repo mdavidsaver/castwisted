@@ -7,7 +7,8 @@ L = logging.getLogger('TwCAS.protocol')
 from zope.interface import implements
 from interface import IChannel
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
+from twisted.internet.protocol import connectionDone
 
 import ECA, DBR
 
@@ -68,6 +69,12 @@ class SendData(object):
     @property
     def channel(self):
         return self.__chan()
+
+    def whenReady(self):
+        chan = self.__chan()
+        if chan is None:
+            return defer.fail(connectionDone)
+        return chan.getCircuit().getWaiter()
 
     def _close(self):
         self.__chan = lambda:None

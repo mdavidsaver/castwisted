@@ -46,6 +46,9 @@ class Maker(object):
         pv = pvs.ClientInfo()
         server.add(prefix+'whoami.VAL', pv)
         
+        pv = pvs.Spam()
+        server.add(prefix+'spam.VAL', pv)
+        
         port = int(options['port'])
         
         fact = tcpserver.CASTCPServer(port, server)        

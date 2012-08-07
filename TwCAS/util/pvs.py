@@ -3,9 +3,11 @@
 import logging
 L = logging.getLogger('TwCAS.mailboxpv')
 
-import weakref
+import weakref, struct
 
 from zope.interface import implements
+
+from twisted.internet import reactor
 
 from TwCAS.interface import IPVDBR
 
@@ -105,3 +107,46 @@ class ClientInfo(object):
 
     def monitor(self, request):
         self.get(request)
+
+class Spam(object):
+    """A PV which writes incrementing numbers
+    to all clients as fast as it can.
+    """
+    implements(IPVDBR)
+    
+    I = struct.Struct('!I')    
+    
+    def __init__(self):
+        self.monitors = weakref.WeakValueDictionary()
+
+    def getInfo(self, request):
+        return (5, 1, 1)
+
+    def get(self, request):
+        msg = request.metaLen*'\0' + self.I.pack(0)
+        request.update(msg, 1)
+
+    def monitor(self, request):
+        request.__count = 0
+        request.__meta = request.metaLen*'\0'
+        self.pump(request)
+
+    def pump(self, request):
+        while not request.complete:
+            c = request.__count
+            
+            msg = request.__meta + self.I.pack(c)
+            if not request.update(msg, 1):
+                # Buffer was full, message not sent
+                D = request.whenReady()
+                D.addCallback(self.kick, request)
+                D.addErrback(lambda D:None) # swallow
+                return
+                
+            if c == 0xffffffff:
+                request.__count = 0
+            else:
+                request.__count += 1
+
+    def kick(self, junk, request):
+        reactor.callLater(0, self.pump, request)
