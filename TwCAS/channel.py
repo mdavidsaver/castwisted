@@ -209,14 +209,14 @@ class Channel(object):
         return self.__proto.pmux
 
     def getPeer(self):
-        return self.client
+        return '%s:%d'%(self.client.host, self.client.port)
 
     def __eventadd(self, cmd, dtype, dcount, p1, p2, payload):
         if p2 in self.__subscriptions:
-            L.error('%s trying to reuse an active subscription ID'%self.getCircuit().transport.getPeer())
+            L.error('%s trying to reuse an active subscription ID'%self.getCircuit().clientStr)
             return
         if len(payload) < caproto.casubscript.size:
-            L.error('%s tried to create subscription without proper payload'%self.getCircuit().transport.getPeer())
+            L.error('%s tried to create subscription without proper payload'%self.getCircuit().clientStr)
             return
         mask, = caproto.casubscript.unpack(payload)
             
@@ -233,7 +233,7 @@ class Channel(object):
     def __eventcancel(self, cmd, dtype, dcount, p1, p2, payload):
         sub = self.__subscriptions.pop(p2, None)
         if sub is None:
-            L.error('%s trying to cancel unused subscription ID'%self.getCircuit().transport.getPeer())
+            L.error('%s trying to cancel unused subscription ID'%self.getCircuit().clientStr)
             return
 
         msg = caproto.caheader.pack(1, 0, sub.dbr, sub.dcount, self.sid, sub.subid)

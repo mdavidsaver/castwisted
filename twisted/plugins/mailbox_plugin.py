@@ -12,6 +12,16 @@ from twisted.application import internet, service
 from TwCAS import tcpserver, udpserver
 from TwCAS.util import staticserver, pvs
 
+class TwistedLogAdapter(logging.Handler):
+    def emit(self, record):
+        log.msg(self.format(record))
+
+H = TwistedLogAdapter()
+
+L = logging.getLogger()
+L.setLevel(logging.DEBUG)
+L.addHandler(H)
+                            
 class Options(usage.Options):
     optParameters = [["port", "p", 5064, "CA Server port"],
                      ["prefix", 'P', '', "PV Name prefix"],
@@ -25,9 +35,6 @@ class Maker(object):
     options = Options
 
     def makeService(self, options):
-
-        logging.basicConfig(format='%(message)s',
-                            level=logging.DEBUG)
         
         server = staticserver.StaticPVServer()
         
@@ -55,6 +62,3 @@ class Maker(object):
         return caserver
 
 serviceMaker = Maker()
-
-#obs = log.PythonLoggingObserver()
-#obs.start()

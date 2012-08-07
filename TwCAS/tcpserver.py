@@ -156,7 +156,9 @@ class CASTCP(StatefulProtocol):
             self.transport.write(msg)
 
     def connectionMade(self):
-        L.debug('Open Connection from %s', self.transport.getPeer())
+        P = self.transport.getPeer()
+        self.clientStr = '%s:%d'%(P.host, P.port)
+        L.debug('Open Connection from %s', self.clientStr)
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
@@ -234,13 +236,13 @@ class CASTCP(StatefulProtocol):
         try:
             self.__dispatch.get(cmd, self.__ignore)(self, cmd, *args, **kws)
         except caproto.CAProtoFault,e:
-            L.fatal('Connection from %s closed after protocol error: %s', self.transport.getPeer(),e)
+            L.fatal('Connection from %s closed after protocol error: %s', self.clientStr,e)
             self.transport.loseConnection()
         except:
-            L.exception('Error processing message %d from: %s', cmd, self.transport.getPeer())
+            L.exception('Error processing message %d from: %s', cmd, self.clientStr)
 
     def __ignore(self, junk, cmd, *args, **kws):
-        L.debug('Unexpected TCP message %d from %s', cmd, self.transport.getPeer())
+        L.debug('Unexpected TCP message %d from %s', cmd, self.clientStr)
 
     def __echo(self, cmd, dtype, dcount, p1, p2, payload):
         msg = caproto.caheader.pack(23, 0, 0, 0, 0, 0)
@@ -249,11 +251,11 @@ class CASTCP(StatefulProtocol):
     def __version(self, cmd, dtype, dcount, p1, p2, payload):
         self.prio = max(self.prio, dtype)
         self.peerVersion = dcount
-        L.info('%s has version %d and wants priority %d', self.transport.getPeer(), dcount, dtype)
+        L.info('%s has version %d and wants priority %d', self.clientStr, dcount, dtype)
 
     def __user(self, cmd, dtype, dcount, p1, p2, payload):
         self.peerUser = str(payload).strip('\0')
-        L.info("%s is user '%s'", self.transport.getPeer(), self.peerUser)
+        L.info("%s is user '%s'", self.clientStr, self.peerUser)
 
     def __host(self, cmd, dtype, dcount, p1, p2, payload):
         # We don't trust the peer to self identify
@@ -263,16 +265,16 @@ class CASTCP(StatefulProtocol):
         pv = str(payload).strip('\0')
         if self.peerVersion != p2:
             L.warn('%s attempted to change version from %d to %d',
-                   self.transport.getPeer(), self.peerVersion, p2)
+                   self.clientStr, self.peerVersion, p2)
 
-        peer = self.transport.getPeer()
+        P = self.transport.getPeer()
 
         sid = self.nextSID()
 
         self.__channels[sid] = None # Placeholder until channel is claimed
 
         connect = PVConnect(self, sid, cid=p1, pvname=pv,
-                            client=(peer.host, peer.port))
+                            client=(P.host, P.port))
 
         try:
             self.pvserv.connectPV(connect)
@@ -284,13 +286,13 @@ class CASTCP(StatefulProtocol):
         chan = self.__channels.pop(p1, None)
         if chan is None:
             L.warn('%s attempts to close channel %d which does not exist',
-                   self.transport.getPeer(), p1)
+                   self.clientStr, p1)
             return
 
         try:
             if p2 != chan.cid:
                 L.error('%s disconnects %d using cid %d instead of %d',
-                       self.transport.getPeer(), p2, chan.cid)
+                       self.clientStr, p2, chan.cid)
 
             msg = caheader.pack(12, 0, 0, 0, p1, p2)
             
@@ -339,8 +341,7 @@ class CASTCP(StatefulProtocol):
 
     def __unicode__(self):
         if self.pmux is not None:
-            P = self.transport.getPeer()
-            return u'Circuit(%s:%d)' % (P.host, P.port)
+            return u'Circuit(%s)' % self.clientStr
         elif self.__channels is not None:
             return u'Circuit(OPENING)'
         else:
