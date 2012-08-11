@@ -11,7 +11,8 @@ from twisted.internet import reactor
 
 from TwCAS.interface import IPVDBR
 
-from TwCAS import DBR, ECA, caproto
+from TwCAS import ECA, caproto
+from TwCAS import dbr as DBR
 
 __all__ = ['MailboxPV']
 

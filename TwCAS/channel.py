@@ -10,7 +10,8 @@ from interface import IChannel
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import connectionDone
 
-import ECA, DBR
+import ECA
+import dbr as DBR
 
 import caproto
 
