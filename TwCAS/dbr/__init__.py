@@ -62,7 +62,7 @@ _dbr_info = {
     # Specials
     35: (1, 0), # PUT_ACKT
     36: (1, 0), # PUT_ACKS
-    37: (0, 0), # STSACK_STRING
+    37: (0, 8), # STSACK_STRING
     38: (0, 0), # CLASS_NAME
 }
 def dbr_info(dbr):
