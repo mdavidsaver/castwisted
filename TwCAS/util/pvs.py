@@ -14,9 +14,9 @@ from TwCAS.interface import IPVDBR
 from TwCAS import ECA, caproto
 from TwCAS import dbr as DBR
 
-__all__ = ['MailboxPV']
+__all__ = ['DynamicMailboxPV']
 
-class MailboxPV(object):
+class DynamicMailboxPV(object):
     """A PV which stores DBR data sent to it.
     
     It does not support type conversions.

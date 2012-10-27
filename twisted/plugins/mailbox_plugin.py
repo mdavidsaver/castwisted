@@ -40,7 +40,7 @@ class Maker(object):
         
         prefix = options['prefix']
         
-        pv = pvs.MailboxPV(maxCount=int(options['count']))
+        pv = pvs.DynamicMailboxPV(maxCount=int(options['count']))
         server.add(prefix+'mailbox.VAL', pv)
         
         pv = pvs.ClientInfo()
