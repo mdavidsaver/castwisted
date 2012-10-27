@@ -2,24 +2,26 @@
 
 from struct import Struct
 
+__all__ = ['metaEncode','metaDecode']
+
 def unpackNone(obj, tup):
     return
 
 def packNone(obj):
-    return ''
+    return tuple()
 
 def unpackSts(obj, (sts, sevr)):
     obj.status, obj.severity = sts, sevr
 
 def packSts(obj):
-    return (getattr(obj, 'status', 0), getattr(obj, 'severify', 0))
+    return (getattr(obj, 'status', 0), getattr(obj, 'severity', 0))
 
 def unpackTime(obj, (sts, sevr, sec, nsec)):
     obj.status, obj.severity = sts, sevr
     obj.timestamp = (sec, nsec)
 
 def packTime(obj):
-    sts, sevr = getattr(obj, 'status', 0), getattr(obj, 'severify', 0)
+    sts, sevr = getattr(obj, 'status', 0), getattr(obj, 'severity', 0)
     ts = getattr(obj, 'timestamp', (0,0))
     if isinstance(ts, tuple):
         sec, nsec = ts
@@ -90,7 +92,7 @@ def unpackSTSACK(obj, args):
     obj.status, obj.severity, obj.ackt, obj.acks = args
 
 def packSTSACK(obj):    
-    return (getattr(obj, 'status', 0), getattr(obj, 'severify', 0),
+    return (getattr(obj, 'status', 0), getattr(obj, 'severity', 0),
             getattr(obj, 'ackt', 0), getattr(obj, 'acks', 0))
 
 _dbr_meta={
@@ -142,3 +144,16 @@ _dbr_meta[31] = _dbr_meta[24] # CTRL_ENUM
 _dbr_meta[35] = _dbr_meta[1] # PUT_ACKT
 _dbr_meta[36] = _dbr_meta[1] # PUT_ACKS
 _dbr_meta[38] = _dbr_meta[0] # CLASS_NAME
+
+def metaDecode(dbr, data, obj):
+    """metaDecode(dbr#, bytestring, obj)
+    Decode data CA meta-data from the given
+    string and store in the given object
+    """
+    xcode, unpack, _ = _dbr_meta[dbr]
+    unpack(obj, xcode.unpack(data))
+
+def metaEncode(dbr, obj):
+    xcode, _, pack = _dbr_meta[dbr]
+    args = pack(obj)
+    return xcode.pack(*args)

@@ -5,9 +5,11 @@ __all__ = ['dbf_element_size',
            'dbr_size',
            'dbr_count',
            'DBF', 'DBR',
+           'metaEncode','metaDecode',
            ]
 
 from defs import DBF, DBR
+from xcode import metaDecode, metaEncode
 
 _dbf_element_size={DBF.STRING:40,
                    DBF.SHORT :2,  # DBF_INT and DBF_SHORT
