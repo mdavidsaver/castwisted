@@ -10,6 +10,7 @@ from TwCAS.interface import INameServer, IPVServer, IPVDBR
 from collections import defaultdict
 
 from TwCAS.channel import Channel
+from TwCAS.util import splitPVName, InvalidPVNameError
 
 class StaticPVServer(object):
     """Serves from a pre-defined list of PVs
@@ -40,6 +41,7 @@ class StaticPVServer(object):
         to be closed.
         """
         if IPVDBR.providedBy(obj):
+            v = None
             for n,v in self._pvs.iteritems():
                 if v is obj:
                     break
@@ -54,31 +56,13 @@ class StaticPVServer(object):
         for C in chans:
             chans.close()
 
-    def splitPvName(self, name):
-        """Process the requested name string to seperate
-        out the part identifying the PV.
-        
-        Returns ('pvname', 'channel options')
-        """
-        rec, sep, right = name.partition('.')
-        if len(right):
-            #TODO: Slow
-            fld, extra = right, ''
-            for I in range(len(right)):
-                C = right[I]
-                if C>='A' and C<='Z':
-                    continue
-                # found a seperator
-                fld = right[:I]
-                extra = right[I:]
-        else:
-            fld='VAL'
-            extra=''
-
-        return ('%s.%s'%(rec,fld), extra)
-
     def lookupPV(self, search):
-        name, extra = self.splitPvName(search.pv)
+        try:
+            rec, fld, extra = splitPVName(search.pv)
+            name = '%s.%s'%(rec,fld or 'VAL')
+        except InvalidPVNameError:
+            search.disclaim()
+            return
         L.debug('Lookup %s'%name)
         if name in self._pvs:
             search.claim()
@@ -86,7 +70,12 @@ class StaticPVServer(object):
             search.disclaim()
 
     def connectPV(self, request):
-        name, extra = self.splitPvName(request.pv)
+        try:
+            rec, fld, extra = splitPVName(request.pv)
+            name = '%s.%s'%(rec,fld or 'VAL')
+        except InvalidPVNameError:
+            request.disclaim()
+            return
         L.debug('Connect %s'%name)
         pv = self._pvs.get(name, None)
         if pv is None:
