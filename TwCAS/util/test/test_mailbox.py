@@ -21,10 +21,10 @@ class MockDataRequest(object):
     def finish(self):
         self.complete = True
 
-class TestBasic(unittest.TestCase):
+class TestDynamic(unittest.TestCase):
     
     def setUp(self):
-        self.pv = pvs.MailboxPV(firstdbf=1)
+        self.pv = pvs.DynamicMailboxPV(firstdbf=1)
 
     def test_geterr(self):
         R = MockDataRequest(dbr=5)
