@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ['DBF','DBR']
+__all__ = ['DBF','allDBF','DBR','allDBR']
 
 class _DBFEnums(object):
     STRING = 0
@@ -13,6 +13,9 @@ class _DBFEnums(object):
     DOUBLE= 6
 
 DBF = _DBFEnums()
+
+allDBF = [DBF.STRING, DBF.INT, DBF.SHORT, DBF.FLOAT,
+          DBF.ENUM, DBF.CHAR, DBF.LONG, DBF.DOUBLE]
 
 class _DBREnums(object):
     STRING = 0
@@ -66,3 +69,24 @@ class _DBREnums(object):
     CLASS_NAME = 38
 
 DBR = _DBREnums()
+
+allDBR = [DBR.STRING, DBR.INT, DBR.SHORT, DBR.FLOAT,
+          DBR.ENUM, DBR.CHAR, DBR.LONG, DBR.DOUBLE,
+          
+          DBR.STS_STRING, DBR.STS_INT, DBR.STS_SHORT, DBR.STS_FLOAT,
+          DBR.STS_ENUM, DBR.STS_CHAR, DBR.STS_LONG, DBR.STS_DOUBLE,
+          
+          DBR.TIME_STRING, DBR.TIME_INT, DBR.TIME_SHORT, DBR.TIME_FLOAT,
+          DBR.TIME_ENUM, DBR.TIME_CHAR, DBR.TIME_LONG, DBR.TIME_DOUBLE,
+          
+          DBR.GR_STRING, DBR.GR_INT, DBR.GR_SHORT, DBR.GR_FLOAT,
+          DBR.GR_ENUM, DBR.GR_CHAR, DBR.GR_LONG, DBR.GR_DOUBLE,
+          
+          DBR.CTRL_STRING, DBR.CTRL_INT, DBR.CTRL_SHORT, DBR.CTRL_FLOAT,
+          DBR.CTRL_ENUM, DBR.CTRL_CHAR, DBR.CTRL_LONG, DBR.CTRL_DOUBLE,
+          ]
+
+class DBRMeta(object):
+    severity = 3 # INVALID
+    status = 17 # UDF
+    timestamp = (0,0)
