@@ -82,6 +82,11 @@ def valueEncode(dbf, val):
 
 def valueDecode(dbf, data, dcount, forcearray=False):
     dbytes = dbf_element_size(dbf) * dcount
+    if len(data)<dbytes:
+        # CA servers can skip sending trailing nils,
+        # but we need them for proper decoding
+        pad = (dbytes-len(data))*'\0'
+        data += pad
     data = buffer(data, 0, dbytes)
 
     if np and not forcearray:

@@ -5,6 +5,11 @@ L = logging.getLogger('TwCAS.mailboxpv')
 
 import weakref, struct, time
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 from zope.interface import implements
 
 from twisted.internet import reactor
@@ -172,8 +177,12 @@ class MailboxPV(object):
 
         events = 0
 
-        if val!=self.value:
-            events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
+        if np:
+            if np.any(val!=self.value):
+                events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
+        else:
+            if val!=self.value:
+                events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
         self.value = val
 
         try:
