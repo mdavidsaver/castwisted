@@ -33,7 +33,7 @@ _val_metas = ['upper_disp_limit','lower_disp_limit',
 
 def double2int(srcval, srcmeta):
     dstval = map(int,srcval)
-    dstmeta = DBRMeta()
+    dstmeta = DBRMeta(udf=None)
     for F in _val_metas:
         setattr(dstmeta, F, int(getattr(srcmeta, F, 0)))
     for F in _copy_metas:
@@ -45,7 +45,7 @@ def double2int(srcval, srcmeta):
 
 def int2double(srcval, srcmeta):
     dstval = map(float,srcval)
-    dstmeta = DBRMeta()
+    dstmeta = DBRMeta(udf=None)
     for F in _val_metas:
         setattr(dstmeta, F, float(getattr(srcmeta, F, 0)))
     for F in _copy_metas:
@@ -57,7 +57,7 @@ def int2double(srcval, srcmeta):
 
 def enum2int(srcval, srcmeta):
     dstval = srcval
-    dstmeta = DBRMeta()
+    dstmeta = DBRMeta(udf=None)
     for F in _copy_metas:
         try:
             setattr(dstmeta, F, getattr(srcmeta, F))
@@ -74,7 +74,7 @@ _converts = {
 def any2string(srcdbf, srcval, srcmeta):
     #TODO: Use precision for floats
     dstval = map(str, srcval)
-    dstmeta = DBRMeta()
+    dstmeta = DBRMeta(udf=None)
     for F in _copy_metas:
         try:
             setattr(dstmeta, F, getattr(srcmeta, F))
@@ -97,7 +97,7 @@ def string2any(dstdbf, srcval, srcmeta):
         dstval = map(conv,srcval) # TODO: numpy specialization
     except ValueError:
         raise DBRNoConvert("Can't convert '%s'"%srcval)
-    dstmeta = DBRMeta()
+    dstmeta = DBRMeta(udf=None)
     for F in _copy_metas:
         try:
             setattr(dstmeta, F, getattr(srcmeta, F))

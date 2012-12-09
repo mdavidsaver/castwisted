@@ -2,12 +2,11 @@
 
 from twisted.trial import unittest
 
-from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from TwCAS.util import pvs
 from TwCAS import ECA
-from TwCAS.dbr import DBF, DBR
+from TwCAS.dbr import DBF, DBR, DBE, dbr_info
 
 class MockDataRequest(object):
     def __init__(self, **kws):
@@ -209,3 +208,36 @@ class TestNumeric(unittest.TestCase):
         
         self.assertTrue(hasattr(R,'result'))
         self.assertEqual(R.result, ('43'+'\0'*38, 1))
+
+    @inlineCallbacks
+    def test_get_time(self):
+        dbf, metaLen = dbr_info(DBR.TIME_STRING)
+        R = MockDataRequest(dbr=DBR.TIME_STRING, dbf=dbf,
+                            dcount=1, metaLen=metaLen,
+                            mask=DBE.VALUE)
+
+        self.pv.monitor(R)
+
+        self.assertTrue(hasattr(R,'result'))
+
+        R.reset()
+
+        P = MockDataRequest(dbr=DBR.FLOAT, dbf=DBF.FLOAT, dcount=1, metaLen=0)
+
+        self.assertEqual(self.meta.status, 0)
+
+        self.pv.put(DBR.TIME_FLOAT, 1, '\0\0\0\0\0\1\1\1\0\2\2\2'+'B(\xcc\xcd', P)
+
+        yield P.waiter
+        
+        self.assertTrue(P.complete)
+        self.assertTrue(hasattr(R,'result'))
+        
+        self.assertEqual(R.result[1], 1)
+        res = R.result[0]
+
+        self.assertEqual(res[0:2], '\0\0') # status
+        self.assertEqual(res[2:4], '\0\0') # severity
+        self.assertEqual(res[4:8], '\0\1\1\1') # sec
+        self.assertEqual(res[8:12], '\0\2\2\2') # ns
+        self.assertEqual(res[12:], '42' + '\0'*38)

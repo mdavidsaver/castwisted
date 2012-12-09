@@ -87,10 +87,11 @@ allDBR = [DBR.STRING, DBR.INT, DBR.SHORT, DBR.FLOAT,
           ]
 
 class DBRMeta(object):
-    severity = 3 # INVALID
-    status = 17 # UDF
-    timestamp = (0,0)
-    acks = 0
+    def __init__(self, udf=True):
+        if udf is not None:
+            self.severity = 3 if udf else 0 # INVALID
+            self.status = 17 if udf else 0 # UDF
+            self.timestamp = (0,0)
 
 class _DBEEnums(object):
     VALUE = 1

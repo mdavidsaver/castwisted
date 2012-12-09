@@ -3,7 +3,7 @@
 import logging
 L = logging.getLogger('TwCAS.mailboxpv')
 
-import weakref, struct
+import weakref, struct, time
 
 from zope.interface import implements
 
@@ -163,7 +163,7 @@ class MailboxPV(object):
         
         dbf, metaLen = DBR.dbr_info(dtype)
         
-        M = DBR.DBRMeta()
+        M = DBR.DBRMeta(udf=None)
 
         val = DBR.valueDecode(dbf, dbrdata[metaLen:], dcount)
         DBR.metaDecode(dtype, dbrdata[:metaLen], M)
@@ -176,14 +176,20 @@ class MailboxPV(object):
             events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
         self.value = val
 
-        if M.severity!=self.__meta.severity or M.status!=self.__meta.status:
-            events |= DBR.DBE.ALARM
-        self.__meta.severity = M.severity
-        self.__meta.status = M.status
+        try:
+            if M.severity!=self.__meta.severity or M.status!=self.__meta.status:
+                events |= DBR.DBE.ALARM
+            self.__meta.severity = M.severity
+            self.__meta.status = M.status
+        except AttributeError:
+            pass # sender did not include alarm info
 
-        if M.timestamp != (0,0) and M.timestamp != self.__meta.timestamp:
+        try:
             self.__meta.timestamp = M.timestamp
-            events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
+        except AttributeError:
+            # sender did not include timestamp
+            now = time.time()
+            self.__meta.timestamp = (int(now), int((now%1)*1e9))
 
         # TODO: update GR and CTRL meta data
         
