@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import weakref
+
 from twisted.trial import unittest
 
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
 
 from TwCAS.util import pvs
 from TwCAS import ECA
@@ -209,7 +212,6 @@ class TestNumeric(unittest.TestCase):
         self.assertTrue(hasattr(R,'result'))
         self.assertEqual(R.result, ('43'+'\0'*38, 1))
 
-    @inlineCallbacks
     def test_get_time(self):
         dbf, metaLen = dbr_info(DBR.TIME_STRING)
         R = MockDataRequest(dbr=DBR.TIME_STRING, dbf=dbf,
@@ -227,17 +229,45 @@ class TestNumeric(unittest.TestCase):
         self.assertEqual(self.meta.status, 0)
 
         self.pv.put(DBR.TIME_FLOAT, 1, '\0\0\0\0\0\1\1\1\0\2\2\2'+'B(\xcc\xcd', P)
-
-        yield P.waiter
         
-        self.assertTrue(P.complete)
-        self.assertTrue(hasattr(R,'result'))
-        
-        self.assertEqual(R.result[1], 1)
-        res = R.result[0]
+        @P.waiter.addCallback
+        def finish(_):
+            self.assertTrue(P.complete)
+            self.assertTrue(hasattr(R,'result'))
+            
+            self.assertEqual(R.result[1], 1)
+            res = R.result[0]
+    
+            self.assertEqual(res[0:2], '\0\0') # status
+            self.assertEqual(res[2:4], '\0\0') # severity
+            self.assertEqual(res[4:8], '\0\1\1\1') # sec
+            self.assertEqual(res[8:12], '\0\2\2\2') # ns
+            self.assertEqual(res[12:], '42' + '\0'*38)
+    
+            self.assertEqual(1, len(self.pv._MailboxPV__subscriptions))
+    
+            # Now we want to check that MailboxPV "forgets" about
+            # monitors which are no longer referenced by a source.
+            # Since weakref is used internall this is really
+            # a check that MailboxPV doesn't hold any other refs.
+            #
+            # Now we play some games to ensure that no refs
+            # remain when we do this test.
+            # (this is needed in python 2.6.6)
+    
+            D = Deferred()
+            D.addCallback(lambda x:None)
+            reactor.callLater(0, self.check_cleanup, D, weakref.ref(R))
+            return D
 
-        self.assertEqual(res[0:2], '\0\0') # status
-        self.assertEqual(res[2:4], '\0\0') # severity
-        self.assertEqual(res[4:8], '\0\1\1\1') # sec
-        self.assertEqual(res[8:12], '\0\2\2\2') # ns
-        self.assertEqual(res[12:], '42' + '\0'*38)
+        return P.waiter
+
+    def check_cleanup(self, D, ref):
+        D.callback(None)
+        del D
+
+        import gc
+        gc.collect()
+        self.assertTrue(ref() is None)
+        self.assertEqual(0, len(self.pv._MailboxPV__subscriptions))
+
