@@ -243,11 +243,21 @@ class Spam(object):
     def getInfo(self, request):
         return (5, 1, 1)
 
+    def _check(self, request):
+        if request.dbf!=5:
+            request.error(ECA.ECA_BADTYPE)
+            return True
+        return False
+
     def get(self, request):
+        if self._check(request):
+            return
         msg = request.metaLen*'\0' + self.I.pack(0)
         request.update(msg, 1)
 
     def monitor(self, request):
+        if self._check(request):
+            return
         request.__count = 0
         request.__meta = request.metaLen*'\0'
         self.pump(request)
