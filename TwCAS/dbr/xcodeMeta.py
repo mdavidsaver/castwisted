@@ -136,7 +136,7 @@ _dbr_meta={
     30 :(Struct('!hhhxx8sffffffff'), unpackCTRLReal, packCTRLReal),
     34 :(Struct('!hhhxx8sdddddddd'), unpackCTRLReal, packCTRLReal),
     # Specials
-    37 :(Struct('!HHHH'), unpackSTSACK, unpackSTSACK),
+    37 :(Struct('!HHHH'), unpackSTSACK, packSTSACK),
    }
 _dbr_meta[21] = _dbr_meta[7] # GR_STRING
 _dbr_meta[28] = _dbr_meta[7] # CTRL_STRING
