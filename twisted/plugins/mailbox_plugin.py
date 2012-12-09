@@ -6,9 +6,9 @@ from zope.interface import implements
 
 from twisted.python import usage, log
 from twisted.plugin import IPlugin
-from twisted.application import internet, service
+from twisted.application import service
 
-from TwCAS import tcpserver, udpserver
+from TwCAS.application import makeCASService
 from TwCAS.util import staticserver, mailbox
 from TwCAS.dbr.defs import string2DBF, DBR
 
@@ -62,20 +62,7 @@ class Maker(object):
         server.add(name, pv)
         
         port = int(options['port'])
-        
-        fact = tcpserver.CASTCPServer(port, server)   
 
-        tcpserv = internet.TCPServer(port, fact,
-                                     interface=options['ip'])
-
-        udpserv = internet.UDPServer(port,
-                                     udpserver.CASUDP(server, port),
-                                     interface=options['ip'])
-
-        caserver = service.MultiService()
-        tcpserv.setServiceParent(caserver)
-        udpserv.setServiceParent(caserver)
-        
-        return caserver
+        return makeCASService(server, port, interface=options['ip'])
 
 serviceMaker = Maker()
