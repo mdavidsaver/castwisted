@@ -20,7 +20,11 @@ from TwCAS.dbr.defs import POSIX_TIME_AT_EPICS_EPOCH
 class MailboxPV(object):
     """A PV which stores DBR data of a specific type.
     
-    Data of other types will be converted if possible
+    Data of other types will be converted if possible.
+
+    Sends monitor updates on value or meta-data change.
+
+    Handles update of meta-data by client.
     """
     implements(IPVDBR)
     longStringSize = 128
@@ -52,6 +56,9 @@ class MailboxPV(object):
         if request.dbr in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
             request.error(ECA.ECA_BADTYPE)
             return
+        elif request.dbr==DBR.DBR.CLASS_NAME:
+            request.update(self.__class__.__name__[:40], 1)
+            return
 
         try:
             val, M = DBR.convert.castDBR(request.dbf, self.dbf,
@@ -82,9 +89,19 @@ class MailboxPV(object):
             return
         # Alarm ACKs don't get queued.
         if dtype in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
-            #TODO: Handle these
-            if reply:
-                reply.error(ECA.ECA_BADTYPE)
+            if dcount!=1:
+                reply.error(ECA.ECA_PUTFAIL)
+                
+            val = DBR.valueDecode(DBR.DBR.SHORT, dbrdata, dcount)[0]
+
+            if dtype==DBR.DBR.PUT_ACKT:
+                self.__meta.ackt  = val
+            else: # dtype==DBR.DBR.PUT_ACKS
+                self.__meta.acks = min(val, getattr(self.__meta, 'severity', 0))
+
+            for M in self.__subscriptions.keys():
+                if M.dbr==DBR.DBR.STSACK_STRING:
+                    self.get(M)
             return
 
         active = self.__lastput is not None
