@@ -14,6 +14,19 @@ class _DBFEnums(object):
 
 DBF = _DBFEnums()
 
+def string2DBF(s):
+    if s.startswith('DBR_'):
+        s=s[4:]
+    elif s.startswith('DBF_'):
+        s=s[4:]
+    try:
+        d = getattr(DBF, s)
+    except AttributeError:
+        d = None
+    if d not in allDBF:
+        raise ValueError('Unknown DBF')
+    return d
+
 allDBF = [DBF.STRING, DBF.INT, DBF.SHORT, DBF.FLOAT,
           DBF.ENUM, DBF.CHAR, DBF.LONG, DBF.DOUBLE]
 
