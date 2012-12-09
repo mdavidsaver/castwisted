@@ -30,8 +30,8 @@ class Options(usage.Options):
 
 class Maker(object):
     implements(IServiceMaker, IPlugin)
-    tapname = 'mailbox'
-    description = "CA Server with a single PV"
+    tapname = 'pvdemo'
+    description = "CA Server with a demo PVs"
     options = Options
 
     def makeService(self, options):
