@@ -7,7 +7,7 @@ from defs import DBRMeta, DBF
 
 __all__ = ['castDBR']
 
-class DBRNoConvert(Exception):
+class DBRNoConvert(ValueError):
     pass
 
 _dbf_int = object()
@@ -32,7 +32,7 @@ _val_metas = ['upper_disp_limit','lower_disp_limit',
               'upper_ctrl_limit','lower_ctrl_limit']
 
 def double2int(srcval, srcmeta):
-    dstval = int(srcval)
+    dstval = map(int,srcval)
     dstmeta = DBRMeta()
     for F in _val_metas:
         setattr(dstmeta, F, int(getattr(srcmeta, F, 0)))
@@ -44,7 +44,7 @@ def double2int(srcval, srcmeta):
     return (dstval, dstmeta)
 
 def int2double(srcval, srcmeta):
-    dstval = float(srcval)
+    dstval = map(float,srcval)
     dstmeta = DBRMeta()
     for F in _val_metas:
         setattr(dstmeta, F, float(getattr(srcmeta, F, 0)))
@@ -73,7 +73,7 @@ _converts = {
 
 def any2string(srcdbf, srcval, srcmeta):
     #TODO: Use precision for floats
-    dstval = str(srcval)
+    dstval = map(str, srcval)
     dstmeta = DBRMeta()
     for F in _copy_metas:
         try:
@@ -94,7 +94,7 @@ _fromstring = {
 def string2any(dstdbf, srcval, srcmeta):
     conv = _fromstring[dstdbf]
     try:
-        dstval = conv(srcval)
+        dstval = map(conv,srcval) # TODO: numpy specialization
     except ValueError:
         raise DBRNoConvert("Can't convert '%s'"%srcval)
     dstmeta = DBRMeta()

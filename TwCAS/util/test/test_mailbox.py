@@ -2,8 +2,12 @@
 
 from twisted.trial import unittest
 
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred, inlineCallbacks
+
 from TwCAS.util import pvs
 from TwCAS import ECA
+from TwCAS.dbr import DBF, DBR
 
 class MockDataRequest(object):
     def __init__(self, **kws):
@@ -11,15 +15,19 @@ class MockDataRequest(object):
             setattr(self, k ,v)
         self.reset()
     def reset(self):
+        self.waiter = Deferred()
         self.result, self.eca = None, None
         self.complete = False
     def error(self, eca):
         self.eca = eca
+        self.complete = True
+        self.waiter.callback(eca==ECA.ECA_NORMAL)
     def update(self, data, dcount, eca=None):
         self.result = (data, dcount)
         self.eca = eca
+        self.waiter.callback(eca==ECA.ECA_NORMAL)
     def finish(self):
-        self.complete = True
+        self.error(ECA.ECA_NORMAL)
 
 class TestDynamic(unittest.TestCase):
     
@@ -101,3 +109,103 @@ class TestDynamic(unittest.TestCase):
         self.assertEqual(M1.result, ('\x42\0\0\0\0\0\0\0', 1))
 
         self.assertEqual(M2.eca, ECA.ECA_NOCONVERT)
+
+class TestNumeric(unittest.TestCase):
+    timeout = 1
+    
+    def setUp(self):
+        self.pv = pvs.MailboxPV(DBF.LONG, 3, initial=[43], udf=False)
+        self.meta = self.pv._MailboxPV__meta
+        self.meta.timestamp = (100, 5)
+
+    @inlineCallbacks
+    def test_put_int(self):
+        R = MockDataRequest()
+        
+        data = '\1\2' + '\0'*6
+
+        self.pv.put(DBF.SHORT, 1, data, R)
+        
+        yield R.waiter
+        
+        self.assertTrue(R.complete)
+
+        self.assertEqual(self.pv.dbf, DBF.LONG)
+        self.assertEqual(len(self.pv.value), 1)
+        self.assertEqual(self.pv.value[0], 0x102)
+
+    @inlineCallbacks
+    def test_put_float(self):
+        R = MockDataRequest()
+        
+        data = 'B(\xcc\xcd' # 42.2
+
+        self.pv.put(DBF.FLOAT, 1, data, R)
+        
+        yield R.waiter
+        
+        self.assertTrue(R.complete)
+
+        self.assertEqual(self.pv.dbf, DBF.LONG)
+        self.assertEqual(self.pv.value, [42])
+
+    @inlineCallbacks
+    def test_put_string(self):
+        R = MockDataRequest()
+        
+        data = '128' + '\0'*37
+        assert len(data)==40
+
+        self.pv.put(DBF.STRING, 1, data, R)
+        
+        yield R.waiter
+        
+        self.assertTrue(R.complete)
+
+        self.assertEqual(self.pv.dbf, DBF.LONG)
+        self.assertEqual(self.pv.value, [128])
+
+    @inlineCallbacks
+    def test_put_time(self):
+        R = MockDataRequest()
+
+        val = '\1\2' + '\0'*6
+        # '!hhIIxx'  sts sevr sec ns pad
+        meta = '\0\7' + '\0\2' + '\0\0\7\4' + '\0\0\5\5' + '\0\0'
+
+        data = meta + val
+
+        self.pv.put(DBR.TIME_SHORT, 1, data, R)
+        
+        yield R.waiter
+        
+        self.assertTrue(R.complete)
+
+        self.assertEqual(self.pv.dbf, DBF.LONG)
+        self.assertEqual(self.pv.value, 0x102)
+        self.assertEqual(self.meta.severity, 2)
+
+
+    def test_get_int(self):
+        R = MockDataRequest(dbr=DBR.LONG, dbf=DBF.LONG, dcount=1, metaLen=0)
+
+        self.pv.get(R)
+        
+        self.assertTrue(hasattr(R,'result'))
+        self.assertEqual(R.result, ('\0\0\0\x2b', 1))
+
+    def test_get_float(self):
+        R = MockDataRequest(dbr=DBR.FLOAT, dbf=DBF.FLOAT, dcount=1, metaLen=0)
+
+        self.pv.get(R)
+        
+        self.assertTrue(hasattr(R,'result'))
+        self.assertEqual(R.result, ('B,\0\0', 1))
+
+    def test_get_string(self):
+        R = MockDataRequest(dbr=DBR.STRING, dbf=DBF.STRING, dcount=1, metaLen=0)
+
+        self.pv.get(R)
+        
+        self.assertTrue(hasattr(R,'result'))
+        self.assertEqual(R.result, ('43'+'\0'*38, 1))

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from defs import DBF
+from info import dbf_element_size
 
 __all__ = ['valueEncode','valueDecode']
 
@@ -79,14 +80,16 @@ def valueEncode(dbf, val):
 
     return val
 
-def valueDecode(dbf, data, forcearray=False):
+def valueDecode(dbf, data, dcount, forcearray=False):
+    dbytes = dbf_element_size(dbf) * dcount
+    data = buffer(data, 0, dbytes)
+
     if np and not forcearray:
-        val = np.frombuffer(buffer(data), dtype=_wire_dtype[dbf])
+        val = np.frombuffer(data, dtype=_wire_dtype[dbf])
         val = np.asarray(val, dtype=_host_dtype[dbf])
 
     elif dbf==DBF.STRING:
         out = []
-        data= buffer(data)
         while len(data):
             D = data[:40]
             D = D.rstrip('\0') if D[0]!='\0' else ''
@@ -96,7 +99,7 @@ def valueDecode(dbf, data, forcearray=False):
 
     else:
         val = array.array(_arr_type[dbf])
-        val.fromstring(data)
+        val.fromstring(data[:])
         if _swap:
             val.byteswap()
 

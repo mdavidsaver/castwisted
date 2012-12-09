@@ -37,29 +37,29 @@ class TestConvert(unittest.TestCase):
             self.assertIdentical(B, D)
 
     def test_int2float(self):
-        ival = 5
+        ival = [5]
         imeta = self.makeMeta(42)
         fval, fmeta = castDBR(DBF.DOUBLE, DBF.LONG, ival, imeta)
-        self.assertTrue(isinstance(fval, float))
+        self.assertTrue(isinstance(fval[0], float))
         for F in dbr.convert._val_metas:
             self.assertTrue(isinstance(getattr(fmeta, F), float))
 
     def test_float2int(self):
-        ival = 5.1
+        ival = [5.1]
         imeta = self.makeMeta(4.2)
         fval, fmeta = castDBR(DBF.LONG, DBF.DOUBLE, ival, imeta)
-        self.assertTrue(isinstance(fval, int))
+        self.assertTrue(isinstance(fval[0], int))
         for F in dbr.convert._val_metas:
             self.assertTrue(isinstance(getattr(fmeta, F), int))
 
     def test_float2str(self):
-        ival = 5.1
+        ival = [5.1]
         imeta = self.makeMeta(4.2)
         fval, fmeta = castDBR(DBF.STRING, DBF.DOUBLE, ival, imeta)
-        self.assertEqual(fval, str(5.1))
+        self.assertEqual(fval, [str(5.1)])
 
     def test_str2float(self):
-        ival = str(5.1)
+        ival = [str(5.1)]
         imeta = DBRMeta()
         fval, fmeta = castDBR(DBF.DOUBLE, DBF.STRING, ival, imeta)
-        self.assertAlmostEqual(5.1, fval)
+        self.assertAlmostEqual(5.1, fval[0])

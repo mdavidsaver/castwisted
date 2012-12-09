@@ -121,7 +121,7 @@ class TestDecodeValue(unittest.TestCase):
                 if typecode: # false for DBF.STRING
                     expect = array.array(typecode, expect)
 
-                actual = dbr.valueDecode(dbf, INP, forcearray=True)
+                actual = dbr.valueDecode(dbf, INP, len(expect), forcearray=True)
                 self.assertEqual(len(expect), len(actual))
                 self.assertEqual(expect, actual)
             except:
@@ -135,7 +135,7 @@ class TestDecodeValue(unittest.TestCase):
                     dtype = dbr.xcodeValue._host_dtype[dbf]
                     expect = np.asarray(expect, dtype=dtype)
 
-                    actual = dbr.valueDecode(dbf, INP)
+                    actual = dbr.valueDecode(dbf, INP, len(expect))
                     self.assertEqual(len(expect), len(actual))
                     self.assertTrue(np.all(expect==actual))
                 except:

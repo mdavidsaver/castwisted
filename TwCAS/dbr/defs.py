@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ['DBF','allDBF','DBR','allDBR']
+__all__ = ['DBF','allDBF','DBR','allDBR','DBE']
 
 class _DBFEnums(object):
     STRING = 0
@@ -90,3 +90,12 @@ class DBRMeta(object):
     severity = 3 # INVALID
     status = 17 # UDF
     timestamp = (0,0)
+    acks = 0
+
+class _DBEEnums(object):
+    VALUE = 1
+    ARCHIVE = 2
+    ALARM = 4
+    PROPERTY = 8
+
+DBE = _DBEEnums()
