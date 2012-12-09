@@ -87,6 +87,7 @@ class MailboxPV(object):
             if reply:
                 reply.error(ECA.ECA_BADTYPE)
             return
+        #L.debug("Put %d %d", dtype,dcount)
         # Alarm ACKs don't get queued.
         if dtype in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
             if dcount!=1:
@@ -95,9 +96,10 @@ class MailboxPV(object):
             val = DBR.valueDecode(DBR.DBR.SHORT, dbrdata, dcount)[0]
 
             if dtype==DBR.DBR.PUT_ACKT:
-                self.__meta.ackt  = val
-            else: # dtype==DBR.DBR.PUT_ACKS
-                self.__meta.acks = min(val, getattr(self.__meta, 'severity', 0))
+                self.__meta.ackt  = 1 if val else 0
+            elif val >= getattr(self.__meta, 'acks', 0):
+                # dtype==DBR.DBR.PUT_ACKS
+                self.__meta.acks = 0
 
             for M in self.__subscriptions.keys():
                 if M.dbr==DBR.DBR.STSACK_STRING:
@@ -146,6 +148,8 @@ class MailboxPV(object):
                 events |= DBR.DBE.ALARM
             self.__meta.severity = M.severity
             self.__meta.status = M.status
+            if not self.__meta.ackt and self.__meta.severity >= self.__meta.acks:
+                self.__meta.acks = self.__meta.severity
         except AttributeError:
             pass # sender did not include alarm info
 

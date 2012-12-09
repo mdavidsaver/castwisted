@@ -73,8 +73,8 @@ def unpackCTRLInt(obj, args):
     unpackGRInt(obj, args[:-2])
     obj.upper_ctrl_limit, obj.lower_ctrl_limit = args[-2:]
 
-def packCTRLInt(obj, args):
-    return packGRInt(obj, args[:-2]) + \
+def packCTRLInt(obj):
+    return packGRInt(obj) + \
         (getattr(obj, 'upper_ctrl_limit', 0),
          getattr(obj, 'lower_ctrl_limit', 0))
 
@@ -83,8 +83,8 @@ def unpackCTRLReal(obj, args):
     unpackGRReal(obj, args[:-2])
     obj.upper_ctrl_limit, obj.lower_ctrl_limit = args[-2:]
 
-def packCTRLReal(obj, args):
-    return packGRReal(obj, args[:-2]) + \
+def packCTRLReal(obj):
+    return packGRReal(obj) + \
         (getattr(obj, 'upper_ctrl_limit', 0),
          getattr(obj, 'lower_ctrl_limit', 0))
 

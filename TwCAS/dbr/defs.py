@@ -101,6 +101,7 @@ allDBR = [DBR.STRING, DBR.INT, DBR.SHORT, DBR.FLOAT,
 
 class DBRMeta(object):
     def __init__(self, udf=True):
+        self.ackt , self.acks = 1, 0
         if udf is not None:
             self.severity = 3 if udf else 0 # INVALID
             self.status = 17 if udf else 0 # UDF
