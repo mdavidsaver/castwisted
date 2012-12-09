@@ -233,6 +233,7 @@ class CASTCP(StatefulProtocol):
         return (self.header1, caheader.size)
 
     def __process(self, cmd, *args, **kws):
+        #L.debug("RX message %d",cmd)
         try:
             self.__dispatch.get(cmd, self.__ignore)(self, cmd, *args, **kws)
         except caproto.CAProtoFault,e:

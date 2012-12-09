@@ -64,9 +64,7 @@ class Maker(object):
         port = int(options['port'])
         
         fact = tcpserver.CASTCPServer(port, server)   
-        
-        #TODO: Use options['ip']
-        
+
         tcpserv = internet.TCPServer(port, fact,
                                      interface=options['ip'])
 

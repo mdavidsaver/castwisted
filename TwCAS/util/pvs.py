@@ -5,10 +5,7 @@ L = logging.getLogger('TwCAS.mailboxpv')
 
 import weakref, struct, time, traceback
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+from TwCAS.dbr.xcodeValue import np
 
 from zope.interface import implements
 
