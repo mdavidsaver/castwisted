@@ -82,7 +82,7 @@ class MailboxPV(object):
             return
         self.__subscriptions[request] = None
 
-    def put(self, dtype, dcount, dbrdata, reply):
+    def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
         if dtype in [DBR.DBR.STSACK_STRING, DBR.DBR.CLASS_NAME]:
             if reply:
                 reply.error(ECA.ECA_BADTYPE)

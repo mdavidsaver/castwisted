@@ -48,7 +48,7 @@ class MockPV(object):
     def getInfo(self, request):
         return (0, 1, 3)
     
-    def put(dtype, dcount, dbrdata, reply=None):
+    def put(dtype, dcount, dbrdata, reply=None, chan=None):
         pass
     
     def get(self, request):
@@ -137,13 +137,13 @@ class TestOperations(unittest.TestCase):
     def test_putnotify(self):
         D = Deferred()
         
-        self.pv.put = lambda w,x,y,z:D.callback((w,x,y,z))
+        self.pv.put = lambda v,w,x,y,z:D.callback((v,w,x,y,z))
 
         self.chan.messageReceived(cmd=19, dtype=0, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='a'*8)
 
-        dtype, dcount, data, put = yield D
+        dtype, dcount, data, put, chan = yield D
 
         self.assertEqual(dtype, 0)
         self.assertEqual(dcount, 1)
@@ -163,13 +163,13 @@ class TestOperations(unittest.TestCase):
     def test_put(self):
         D = Deferred()
         
-        self.pv.put = lambda w,x,y,z:D.callback((w,x,y,z))
+        self.pv.put = lambda v,w,x,y,z:D.callback((v,w,x,y,z))
 
         self.chan.messageReceived(cmd=4, dtype=0, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='a'*8)
 
-        dtype, dcount, data, put = yield D
+        dtype, dcount, data, put, chan = yield D
 
         self.assertEqual(dtype, 0)
         self.assertEqual(dcount, 1)
@@ -280,13 +280,13 @@ class TestShutdown(unittest.TestCase):
     def test_put(self):
         D = Deferred()
         
-        self.pv.put = lambda w,x,y,z:D.callback((w,x,y,z))
+        self.pv.put = lambda v,w,x,y,z:D.callback((v,w,x,y,z))
 
         self.chan.messageReceived(cmd=19, dtype=0, dcount=1,
                                   p1=self.request.sid, p2=10000,
                                   payload='a'*8)
 
-        dtype, dcount, data, put = yield D
+        dtype, dcount, data, put, chan = yield D
 
         self.assertFalse(put.complete)
         

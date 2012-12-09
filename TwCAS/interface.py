@@ -94,11 +94,15 @@ class IPVDBR(Interface):
         Returns (native_dbr, maxcount, rights)
         """
 
-    def put(dtype, dcount, dbrdata, reply=None):
+    def put(dtype, dcount, dbrdata, reply=None, chan=None):
         """Called when a put request is received.
         
         If the client requests completion notification then
         the reply argument will be a @PutNotify instance.
+        
+        When data arrives from a remote client, chan will
+        be an object implementing IChannel, or None if
+        the data originated locally.
         """
 
     def get(reply):

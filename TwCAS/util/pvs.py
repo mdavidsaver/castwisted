@@ -61,7 +61,7 @@ class DynamicMailboxPV(object):
 
         request.update('%s%s%s'%(meta,data,pad), dcount)
 
-    def put(self, dtype, dcount, dbrdata, reply):
+    def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
         dbf, mlen = DBR.dbr_info(dtype)
 
         L.debug('%s put dbr:%d', self, dtype)

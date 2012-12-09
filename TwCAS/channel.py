@@ -272,13 +272,13 @@ class Channel(object):
 
         self.__operations[id(put)] = put
         
-        self.pv.put(dtype, dcount, payload, put)
+        self.pv.put(dtype, dcount, payload, put, self)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
         if self.rights&2==0:
             return
-        self.pv.put(dtype, dcount, payload, None)
+        self.pv.put(dtype, dcount, payload, None, self)
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass
