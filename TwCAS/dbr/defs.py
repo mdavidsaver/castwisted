@@ -113,3 +113,5 @@ class _DBEEnums(object):
     PROPERTY = 8
 
 DBE = _DBEEnums()
+
+POSIX_TIME_AT_EPICS_EPOCH = 631152000

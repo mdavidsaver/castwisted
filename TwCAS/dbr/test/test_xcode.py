@@ -82,6 +82,7 @@ class TestEncodeValue(unittest.TestCase):
     def test_list(self):
         for dbf, INP, expect in testdata:
             try:
+                INP = dbr.valueMake(dbf, INP)
                 actual = dbr.valueEncode(dbf, INP)
                 self.assertEqual(expect, actual)
             except:
@@ -91,13 +92,14 @@ class TestEncodeValue(unittest.TestCase):
     def test_array(self):
         for dbf, INP, expect in testdata:
             try:
-                typecode = dbr.xcodeValue._arr_type[dbf]
-                if typecode: # false for DBF.STRING
-                    INP = array.array(typecode, INP)
+                dcount = len(INP)
+                INP = dbr.valueMake(dbf, INP, usearray=True)
                 actual = dbr.valueEncode(dbf, INP)
                 self.assertEqual(expect, actual)
             except:
-                print 'Failed on',dbf,INP,expect
+                print 'Failed on',dbf,dcount,INP
+                print '  expect',len(expect),expect
+                print '  actual',len(actual),actual
                 raise
 
     if np:

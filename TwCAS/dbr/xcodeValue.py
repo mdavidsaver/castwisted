@@ -3,7 +3,7 @@
 from defs import DBF
 from info import dbf_element_size
 
-__all__ = ['valueEncode','valueDecode']
+__all__ = ['valueMake','valueEncode','valueDecode']
 
 import array
 try:
@@ -41,6 +41,23 @@ _arr_type = {
     DBF.DOUBLE:'d',
 }
 
+def getArrayType(dbf):
+    if dbf==DBF.STRING:
+        return None
+    else:
+        try:
+            return _arr_type[dbf]
+        except KeyError: # default to byte array
+            return 'b'
+
+if np:
+    def getDType(dbf, net=False):
+        D = _wire_dtype if net else _host_dtype
+        try:
+            return D[dbf]
+        except KeyError: # default to byte array
+            return np.int8
+
 import sys
 _swap = sys.byteorder!='big'
 
@@ -48,23 +65,39 @@ def _ca_str(inp):
     if len(inp)>40:
         return inp[:40]
     else:
-        padlen = (40 - len(inp)%40)%40
+        padlen = (40 - len(inp)%40)
         return inp + '\0'*padlen
 
-def valueEncode(dbf, val):
-    if isinstance(val, list):
-        if np:
-            val = np.asarray(val, dtype=_wire_dtype[dbf])
-        elif dbf!=DBF.STRING:
-            val = array.array(_arr_type[dbf], val)
-        else:
-            # special handling for list of strings
-            # since array can't represent this.
-            val = map(_ca_str, val)
-            val = ''.join(val)
-            return val
-
+def valueMake(dbf, val, usearray=None):
+    """Normalize input as an encodable value.
+    """
     if isinstance(val, array.ArrayType):
+        return val
+    elif np and isinstance(val, np.ndarray):
+        return val
+    elif isinstance(val, list):
+        if np and usearray is not True:
+            return np.asarray(val, dtype=_host_dtype[dbf])
+        elif not np and usearray is False:
+            raise RuntimeError("numpy required, but not present")
+        elif dbf!=DBF.STRING:
+            return array.array(_arr_type[dbf], val)
+        else:
+            # special handling needed later for list of strings
+            return val
+    else:
+        # Silently turn scalars into array of length 1
+        return array.array(_arr_type[dbf], [val])
+
+def valueEncode(dbf, val):
+    if dbf==DBF.STRING and isinstance(val, list):
+        # special handling for list of strings
+        # since array can't represent this.
+        val = map(_ca_str, val)
+        val = ''.join(val)
+        return val
+
+    elif isinstance(val, array.ArrayType):
         if _swap:
             # Avoid clobbering the original
             val = array.array(val.typecode, val)
@@ -76,7 +109,7 @@ def valueEncode(dbf, val):
         val = val.tostring()
 
     else:
-        raise ValueError("Can't encode objects of type %s"%type(val))
+        raise ValueError("Can't encode objects of type %s like '%s'"%(type(val),val))
 
     return val
 

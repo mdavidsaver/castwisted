@@ -3,7 +3,7 @@
 import logging
 L = logging.getLogger('TwCAS.mailboxpv')
 
-import weakref, struct, time
+import weakref, struct, time, traceback
 
 try:
     import numpy as np
@@ -18,6 +18,7 @@ from TwCAS.interface import IPVDBR
 
 from TwCAS import ECA, caproto
 from TwCAS import dbr as DBR
+from TwCAS.dbr.defs import POSIX_TIME_AT_EPICS_EPOCH
 
 __all__ = ['DynamicMailboxPV'
           ,'MailboxPV'
@@ -104,7 +105,11 @@ class MailboxPV(object):
     def __init__(self, dbf, maxcount, initial=None, udf=True):
         self.dbf, self.maxCount = dbf, maxcount
         self.__meta = DBR.DBRMeta()
-        self.value = initial
+        if maxcount<1:
+            raise ValueError("maxcount must be >= 1")
+        if initial is None:
+            initial = [0] if dbf is not DBR.DBF.STRING else ['']
+        self.value = DBR.valueMake(dbf, initial)
         if not udf:
             self.__meta.severity = 0
             self.__meta.status = 0
@@ -136,8 +141,8 @@ class MailboxPV(object):
             request.update(M+val, dlen)
 
         except ValueError:
-            print "Can't satisfy request for DBR",request.dbr
             request.error(ECA.ECA_NOCONVERT)
+            traceback.print_exc()
 
     def monitor(self, request):
         self.get(request)
@@ -165,7 +170,16 @@ class MailboxPV(object):
     def _put(self):
         dtype, dcount, dbrdata, reply = self.__lastput
         self.__lastput = None
-        
+        try:
+            self._put2(dtype, dcount, dbrdata, reply)
+            if reply and not reply.complete:
+                reply.finish()
+        except:
+            if reply:
+                reply.error(ECA.ECA_PUTFAIL)
+            raise
+
+    def _put2(self, dtype, dcount, dbrdata, reply):
         dbf, metaLen = DBR.dbr_info(dtype)
         
         M = DBR.DBRMeta(udf=None)
@@ -198,7 +212,8 @@ class MailboxPV(object):
         except AttributeError:
             # sender did not include timestamp
             now = time.time()
-            self.__meta.timestamp = (int(now), int((now%1)*1e9))
+            self.__meta.timestamp = (int(now)-POSIX_TIME_AT_EPICS_EPOCH,
+                                     int((now%1)*1e9))
 
         # TODO: update GR and CTRL meta data
         
