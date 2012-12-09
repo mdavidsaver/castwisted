@@ -9,7 +9,7 @@ from twisted.plugin import IPlugin
 from twisted.application import internet, service
 
 from TwCAS import tcpserver, udpserver
-from TwCAS.util import staticserver, pvs
+from TwCAS.util import staticserver, mailbox
 from TwCAS.dbr.defs import string2DBF, DBR
 
 class TwistedLogAdapter(logging.Handler):
@@ -45,7 +45,7 @@ class Maker(object):
         dbf = string2DBF(options['dbf'])
         maxcount = int(options['maxcount'])
 
-        pv = pvs.MailboxPV(dbf, maxcount, udf=False)
+        pv = mailbox.MailboxPV(dbf, maxcount, udf=False)
         
         iv = options['initial'][:40]
         pad = (40 - len(iv)%40)%40

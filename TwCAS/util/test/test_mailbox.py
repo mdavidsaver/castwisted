@@ -5,9 +5,9 @@ import weakref
 from twisted.trial import unittest
 
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks, returnValue
+from twisted.internet.defer import Deferred, inlineCallbacks
 
-from TwCAS.util import pvs
+from TwCAS.util import mailbox, pvs
 from TwCAS import ECA
 from TwCAS.dbr import DBF, DBR, DBE, dbr_info
 
@@ -116,7 +116,7 @@ class TestNumeric(unittest.TestCase):
     timeout = 1
     
     def setUp(self):
-        self.pv = pvs.MailboxPV(DBF.LONG, 3, initial=[43], udf=False)
+        self.pv = mailbox.MailboxPV(DBF.LONG, 3, initial=[43], udf=False)
         self.meta = self.pv._MailboxPV__meta
         self.meta.timestamp = (100, 5)
 
