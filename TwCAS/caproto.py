@@ -22,7 +22,7 @@ class CAException(RuntimeError):
         self.eca = status
         RuntimeError.__init__(self, msg)
 
-VERSION = 10
+VERSION = 13
 
 # Short header
 caheader = Struct('!HHHHII')
