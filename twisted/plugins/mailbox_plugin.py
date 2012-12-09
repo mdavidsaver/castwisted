@@ -6,7 +6,6 @@ from zope.interface import implements
 
 from twisted.python import usage, log
 from twisted.plugin import IPlugin
-from twisted.application.service import IServiceMaker
 from twisted.application import internet, service
 
 from TwCAS import tcpserver, udpserver
@@ -25,7 +24,8 @@ L.addHandler(H)
 
 
 class Options(usage.Options):
-    optParameters = [["port", "p", "5064", "CA Server port"],
+    optParameters = [["ip", "", "127.0.0.1", "Address of interface"],
+                     ["port", "", "5064", "CA Server port"],
                      ["pv", "n", "testPV", "PV Name"],
                      ["dbf","t", "STRING", "DBF type"],
                      ["maxcount","m", "1", "Max value count"],
@@ -33,7 +33,7 @@ class Options(usage.Options):
                     ]
 
 class Maker(object):
-    implements(IServiceMaker, IPlugin)
+    implements(service.IServiceMaker, IPlugin)
     tapname = 'mailbox'
     description = "CA Server with a Mailbox PV"
     options = Options
@@ -63,12 +63,16 @@ class Maker(object):
         
         port = int(options['port'])
         
-        fact = tcpserver.CASTCPServer(port, server)        
+        fact = tcpserver.CASTCPServer(port, server)   
         
-        tcpserv = internet.TCPServer(port, fact)
+        #TODO: Use options['ip']
+        
+        tcpserv = internet.TCPServer(port, fact,
+                                     interface=options['ip'])
 
         udpserv = internet.UDPServer(port,
-                                     udpserver.CASUDP(server, port))
+                                     udpserver.CASUDP(server, port),
+                                     interface=options['ip'])
 
         caserver = service.MultiService()
         tcpserv.setServiceParent(caserver)
