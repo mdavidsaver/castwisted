@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import weakref
+import logging
+
+logging.basicConfig(level=logging.ERROR)
 
 from twisted.trial import unittest
 
@@ -10,6 +13,17 @@ from twisted.internet.defer import Deferred, inlineCallbacks
 from TwCAS.util import mailbox, pvs
 from TwCAS import ECA
 from TwCAS.dbr import DBF, DBR, DBE, dbr_info
+
+class NullValidator(object):
+    def __init__(self, dbf, maxCount, initial):
+        self.maxCount = maxCount
+        self.nativeDBF = self.putDBF = dbf
+        self.rights = 3
+        self.IV = initial
+    def setup(self):
+        return (self.nativeDBF, self.IV, None)
+    def put(self,(dbf, value, meta), reply=None, chan=None):
+        return (dbf, value, meta)
 
 class MockDataRequest(object):
     def __init__(self, **kws):
@@ -116,7 +130,8 @@ class TestNumeric(unittest.TestCase):
     timeout = 1
     
     def setUp(self):
-        self.pv = mailbox.MailboxPV(DBF.LONG, 3, initial=[43], udf=False)
+        self.valid = NullValidator(DBF.LONG, 3, [43])
+        self.pv = mailbox.MailboxPV(self.valid)
         self.meta = self.pv._MailboxPV__meta
         self.meta.timestamp = (100, 5)
 
@@ -200,7 +215,8 @@ class TestNumeric(unittest.TestCase):
         R = MockDataRequest(dbr=DBR.FLOAT, dbf=DBF.FLOAT, dcount=1, metaLen=0)
 
         self.pv.get(R)
-        
+
+        self.assertEqual(R.eca, None)
         self.assertTrue(hasattr(R,'result'))
         self.assertEqual(R.result, ('B,\0\0', 1))
 
@@ -208,7 +224,7 @@ class TestNumeric(unittest.TestCase):
         R = MockDataRequest(dbr=DBR.STRING, dbf=DBF.STRING, dcount=1, metaLen=0)
 
         self.pv.get(R)
-        
+
         self.assertTrue(hasattr(R,'result'))
         self.assertEqual(R.result, ('43'+'\0'*38, 1))
 

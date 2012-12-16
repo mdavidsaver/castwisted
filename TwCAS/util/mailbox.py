@@ -10,6 +10,7 @@ from TwCAS.dbr.xcodeValue import np
 from zope.interface import implements
 
 from twisted.internet import reactor
+from twisted.internet.defer import Deferred
 
 from TwCAS.interface import IPVDBR
 
@@ -30,41 +31,82 @@ class MailboxPV(object):
     longStringSize = 128
     perms = 3
     
-    def __init__(self, dbf, maxcount, initial=None, udf=True):
-        self.dbf, self.maxCount = dbf, maxcount
-        self.__meta = DBR.DBRMeta()
-        if maxcount<1:
-            raise ValueError("maxcount must be >= 1")
-        if initial is None:
-            initial = [0] if dbf is not DBR.DBF.STRING else ['']
-        self.value = DBR.valueMake(dbf, initial)
-        if not udf:
-            self.__meta.severity = 0
+    def __init__(self, validator):
+        self.validator = validator
+        validator.pv = self
+
+        usearray = getattr(validator, 'usearray', None)
+        if usearray is False and not np:
+            raise RuntimeError("Validator %s requires numpy, but no available",
+                               str(self))
+
+        validator.usearray = np is None
+
+        try:
+            setup = validator.setup
+        except AttributeError:
+            IV = None
+        else:
+            IV = setup()
+
+        if IV is None:
+            if validator.nativeDBF==DBR.DBF.STRING:
+                initial = ['']
+            else:
+                initial = [0]
+            self.__value = DBR.valueMake(validator.nativeDBF, initial,
+                                         usearray = validator.usearray)
+
+            self.dbf = validator.nativeDBF
+
+            self.__meta = None
+        else:
+            self.dbf, self.__value, self.__meta = IV
+            self.__value = DBR.valueMake(self.dbf, self.__value,
+                                         usearray = validator.usearray)
+
+        if self.__meta is None:
+            self.__meta = DBR.DBRMeta()
             self.__meta.status = 0
+            self.__meta.severity = 0
+            self.__meta.timestamp = (0,0)
+
+        self.__meta.ackt = getattr(self.__meta, 'ackt', 0)
+        self.__meta.acks = 0
+
+        self.events = 0
         self.__subscriptions = weakref.WeakKeyDictionary()
-        self.__lastput = None # Cache for most recent pending put requests
+        self.__putQ = []
 
     def getInfo(self, request):
-        if self.dbf==DBR.DBF.STRING and self.maxCount==1 and \
+        V = self.validator
+        try:
+            dbf, count, rights = V.getInfo()
+        except AttributeError:
+            dbf, count, rights = V.nativeDBF, V.maxCount, V.rights
+            
+        longStringSize = getattr(self.validator, 'longStringSize', self.longStringSize)
+
+        if dbf==DBR.DBF.STRING and count==1 and \
                 getattr(request, 'options', '')=='$':
             # long string
-            return (DBR.DBF.UCHAR, self.longStringSize, self.perms)
+            return (DBR.DBF.UCHAR, longStringSize, rights)
         else:
-            return (self.dbf, self.maxCount, self.perms)
+            return (dbf, count, rights)
 
     def get(self, request):
         if request.dbr in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
             request.error(ECA.ECA_BADTYPE)
             return
         elif request.dbr==DBR.DBR.CLASS_NAME:
-            request.update(self.__class__.__name__[:40], 1)
+            request.update(self.validator.__class__.__name__[:40], 1)
             return
 
         try:
             val, M = DBR.convert.castDBR(request.dbf, self.dbf,
                                          self.value, self.__meta)
             dlen = len(val)
-            val = DBR.valueEncode(request.dbf, self.value)
+            val = DBR.valueEncode(request.dbf, val)
             M = DBR.metaEncode(request.dbr, M)
             
             assert len(M)==request.metaLen, "Incorrect meta encoding"
@@ -106,52 +148,90 @@ class MailboxPV(object):
                     self.get(M)
             return
 
-        active = self.__lastput is not None
-        self.__lastput = (dtype, dcount, dbrdata, reply)
-        if not active:
-            reactor.callLater(0, self._put)
+        N = getattr(self.validator, 'putQueueLen', 1)
+        
+        if N==0:
+            # No buffering so dispatch synchronously
+            self.__putQ = [(dtype, dcount, dbrdata, reply, chan)]
+            self._put()
+
+        elif len(self.__putQ) < N:
+            if len(self.__putQ)==0:
+                reactor.callLater(0, self._put)
+            self.__putQ.append((dtype, dcount, dbrdata, reply, chan))
+
+        elif reply: # request dropped
+            reply.error(ECA.ECA_PUTFAIL)
 
     def _put(self):
-        dtype, dcount, dbrdata, reply = self.__lastput
-        self.__lastput = None
+        dtype, dcount, dbrdata, reply, chan = self.__putQ.pop(0)
         try:
-            self._put2(dtype, dcount, dbrdata, reply)
-            if reply and not reply.complete:
-                reply.finish()
+            self._put2(dtype, dcount, dbrdata, reply, chan)
         except:
+            # This is intended to catch internal logic errors
+            # user errors should be handled by _put2
             if reply:
                 reply.error(ECA.ECA_PUTFAIL)
             raise
 
-    def _put2(self, dtype, dcount, dbrdata, reply):
+    def _put2(self, dtype, dcount, dbrdata, reply, chan):
         dbf, metaLen = DBR.dbr_info(dtype)
         
         M = DBR.DBRMeta(udf=None)
 
-        val = DBR.valueDecode(dbf, dbrdata[metaLen:], dcount)
+        val = DBR.valueDecode(dbf, dbrdata[metaLen:], dcount,
+                              forcearray=self.validator.usearray)
         DBR.metaDecode(dtype, dbrdata[:metaLen], M)
 
-        val, M = DBR.castDBR(self.dbf, dbf, val, M)
+        mydbf = getattr(self.validator, 'putDBF', None)
+        if mydbf is not None:
+            val, M = DBR.castDBR(mydbf, dbf, val, M)
 
-        events = 0
-
-        if np:
-            if np.any(val!=self.value):
-                events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
-        else:
-            if val!=self.value:
-                events |= DBR.DBE.VALUE | DBR.DBE.ARCHIVE
-        self.value = val
+        self.events = DBR.DBE.VALUE | DBR.DBE.ARCHIVE
 
         try:
-            if M.severity!=self.__meta.severity or M.status!=self.__meta.status:
-                events |= DBR.DBE.ALARM
-            self.__meta.severity = M.severity
-            self.__meta.status = M.status
-            if not self.__meta.ackt and self.__meta.severity >= self.__meta.acks:
-                self.__meta.acks = self.__meta.severity
-        except AttributeError:
-            pass # sender did not include alarm info
+            R = self.validator.put((dbf, val, M), reply, chan)
+        except:
+            if reply:
+                reply.error(ECA.ECA_PUTFAIL)
+            L.exception("Validator put error")
+            M.severity = 3
+            M.status = 17 # UDF
+            R = (None, val, M)
+
+        if isinstance(R, Deferred):
+            # start async action
+            R.addCallback(self._putComplete, reply)
+            R.addErrback(self._putFail, M, reply)
+
+        else:
+            self._putComplete(R, reply)
+
+    def _putFail(self, err, M, reply):
+        # TODO: log stack trace
+        L.error("Validator async put error")
+        M.severity = 3
+        M.status = 17 # UDF
+        # Update alarm
+        self._putComplete((self.dbf, self.value, M), reply)
+
+    def _putComplete(self, (dbf, val, M), reply):
+        events = self.events
+
+        self.__value = val
+
+        sevr = self.severity
+        nsev = getattr(M, 'severity', sevr)
+        stat = self.status
+        nsta = getattr(M, 'severity', stat)
+        
+        self.__meta.status = nsta
+        self.__meta.severity = nsev
+        
+        if sevr!=nsev or stat!=nsta:
+            events |= DBR.DBE.ALARM
+        if not self.__meta.ackt and sevr >= self.__meta.acks:
+            self.__meta.acks = sevr
 
         try:
             self.__meta.timestamp = M.timestamp
@@ -169,3 +249,18 @@ class MailboxPV(object):
 
         if reply:
             reply.finish()
+
+    # R/O access to value and meta-data
+    @property
+    def status(self):
+        return getattr(self.__meta, 'status', 0)
+    @property
+    def severity(self):
+        return getattr(self.__meta, 'severity', 0)
+    @property
+    def timestamp(self):
+        ts = getattr(self.__meta, 'timestamp', (0,0))
+        return float(ts[0]) + 1e-9*ts[1]
+    @property
+    def value(self):
+        return self.__value
