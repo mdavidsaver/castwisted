@@ -34,7 +34,7 @@ class ClientInfo(object):
         chan = request.channel
         host, port = chan.client
         user = chan.clientUser
-        
+
         msg = '%s%s on %s:%d' %('\0'*request.metaLen, user, host, port)
         msg = msg[:40]
         print 'send',msg
@@ -99,3 +99,132 @@ class Spam(object):
 
     def kick(self, junk, request):
         reactor.callLater(0, self.pump, request)
+
+class Mutex(object):
+    """A PV which allows global synchronization.
+    
+    Clients should always use put w/ callback
+    
+    Write 1 to request PV, write 0 to disconnect to release.
+    
+    A client takes ownership of a Mutex when the put callback
+    completes.
+    
+    Attempts to get or monitor DBR_INT will return 1 if the 
+    mutex is locked and 0 otherwise.  Attempts to read
+    DBR_STRING will show the "IP:Port" of the current
+    owner, or an empty string.
+    """
+    implements(IPVDBR)
+
+    def __init__(self):
+        self.owner = None
+        self.__subscriptions = weakref.WeakKeyDictionary()
+        self.contenders = []
+    
+    def getInfo(self, request):
+        return (DBR.DBF.LONG, 1, 3)
+
+    def get(self, request):
+        if request.dbf not in [DBR.DBF.LONG, DBR.DBF.STRING]:
+            request.error(ECA.ECA_BADTYPE)
+            return
+
+        if request.dbf==DBR.DBF.LONG:
+            val = 1 if self.owner else 0
+
+        elif request.dbf==DBR.DBF.STRING:
+            if self.owner:
+                C = self.owner()
+                val = '%s@%s'%(C.clientUser, C.client)
+                val = val[:40]
+            else:
+                val = ''
+
+        data = DBR.valueMake(request.dbf, [val])
+        data = DBR.valueEncode(request.dbf, data)
+        
+        request.update(request.metaLen*'\0' + data, 1)
+
+    def monitor(self, request):
+        self.get(request)
+        if request.complete:
+            return
+        self.__subscriptions[request] = None
+
+    def notify(self):
+        for M in self.__subscriptions.keys():
+            if M.mask&(DBR.DBE.VALUE|DBR.DBE.ARCHIVE):
+                self.get(M)
+
+    def _dropowner(self, x):
+        if self.owner is not x:
+            return
+
+        ochan = None
+        while len(self.contenders):
+            oreply, ochan = self.contenders.pop(0)
+            if not ochan.active:
+                continue
+            ochan = weakref(ochan, self._dropowner)
+            oreply.finish()
+        self.owner = ochan
+        if self.owner:
+            L.info("%s now owns", self.owner.client)
+        else:
+            L.info("Now free")
+        self.notify()
+
+    def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
+        if not reply:
+            return # Client must wait for completion
+
+        if dtype in [DBR.DBR.STSACK_STRING, DBR.DBR.CLASS_NAME]:
+            if reply:
+                reply.error(ECA.ECA_BADTYPE)
+            return
+            
+        dbf, metaLen = DBR.dbr_info(dtype)
+
+        val = DBR.valueDecode(dbf, dbrdata[metaLen:], dcount)
+        
+        M = DBR.DBRMeta() # dummy meta for conversion
+        
+        val, M = DBR.castDBR(DBR.DBF.LONG, dbf, val, M)
+
+        eca = None
+
+        if val and chan is self.owner:
+            # Recursive locking not supported
+            eca = ECA.ECA_PUTFAIL
+
+        elif val and self.owner:
+            # take contended mutex
+            self.contenders.append((reply,chan))
+            L.info("%s waiting", chan.client)
+
+        elif val and not self.owner:
+            # take uncontended mutex
+            self.owner = weakref.ref(chan, self._dropowner)
+            self.notify()
+            L.info("%s takes", chan.client)
+
+        elif not val and chan is self.owner:
+            # release owned mutex
+            L.info("%s releases", self.owner.client)
+            self.owner = None
+            self.notify()
+
+        elif not val:
+            # Cancel all pending request for this channel
+            self.contenders=filter(lambda (_,c):c is chan, self.contenders)
+            L.info("%s cancels",chan.client)
+
+        else:
+            eca = ECA.ECA_PUTFAIL
+            L.error("Logic error!")
+
+        if eca:
+            reply.error(eca)
+        else:
+            reply.finish()

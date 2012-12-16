@@ -239,7 +239,7 @@ class Channel(object):
         try:
             self.pv.monitor(sub)
         except:
-            L.exception()
+            L.exception("Error starting monitor")
             sub.error(ECA.ECA_GETFAIL)
 
     def __eventcancel(self, cmd, dtype, dcount, p1, p2, payload):
@@ -267,7 +267,7 @@ class Channel(object):
         try:
             self.pv.get(get)
         except:
-            L.exception()
+            L.exception("Error in get")
             get.error(ECA.ECA_GETFAIL)
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
@@ -283,7 +283,7 @@ class Channel(object):
         try:
             self.pv.put(dtype, dcount, payload, put, self)
         except:
-            L.exception()
+            L.exception("Error in put w/ notify")
             put.error(ECA.ECA_GETFAIL)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
@@ -293,7 +293,7 @@ class Channel(object):
         try:
             self.pv.put(dtype, dcount, payload, None, self)
         except:
-            L.exception()
+            L.exception("Error in put")
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass

@@ -13,6 +13,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 
 from TwCAS.interface import IPVDBR
+from TwCAS.util.interface import IMailbox
 
 from TwCAS import ECA
 from TwCAS import dbr as DBR
@@ -27,7 +28,7 @@ class MailboxPV(object):
 
     Handles update of meta-data by client.
     """
-    implements(IPVDBR)
+    implements(IPVDBR,IMailbox)
     longStringSize = 128
     perms = 3
     

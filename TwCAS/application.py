@@ -6,9 +6,12 @@ Bits related to using TwCAS with twisted.application
 from TwCAS.caproto import SharedUDP
 from TwCAS import tcpserver, udpserver
 
+from TwCAS.util import pvs, mailbox, interface
+
+from twisted.plugin import getPlugins
 from twisted.application import internet, service
 
-__all__ = ['SharedUDPServer','makeCASService']
+__all__ = ['SharedUDPServer','makeCASService','getPVFactory']
 
 class SharedUDPServer(internet.UDPServer):
     """A UDP server using SharedUDP
@@ -41,3 +44,33 @@ def makeCASService(server, port=5064, interface=''):
     udpserv.setServiceParent(caserver)
     
     return caserver
+
+def mailboxFactory(name, config):
+    try:
+        validator = config.get(name, 'validator')
+    except:
+        validator = 'default'
+
+    possible = getPlugins(interface.IMailbox)
+    
+    for P in possible:
+        if P.__class__.__name__==validator:
+            val = P(config, name)
+            return mailbox.MailboxPV(val)
+
+    raise KeyError("%s: validator '%s' not found"%(name, validator))
+
+def _makeNullFactory(cls):
+    def factory(name, config):
+        return cls()
+    return factory
+
+_pv_types = {
+    'Mailbox':mailboxFactory,
+    'Spam':_makeNullFactory(pvs.Spam),
+    'ClientInfo':_makeNullFactory(pvs.ClientInfo),
+    'Mutex':_makeNullFactory(pvs.Mutex),
+}
+
+def getPVFactory(name):
+    return _pv_types[name]

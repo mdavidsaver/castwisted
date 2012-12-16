@@ -12,8 +12,8 @@ class IMailbox(Interface):
     severity = Attribute("The alarm severity.  A number [0-3]")
     status = Attribute("The alarm status.  A number [0-25]")
 
-    timestamp = Attribute("""Time of last value change.  A
-        Double or Datetime""")
+    timestamp = Attribute("""Time of last value change as a
+        Float""")
 
 class IMailboxValidator(Interface):
     nativeDBF = Attribute("""DBF type reported to clients.
@@ -48,6 +48,10 @@ class IMailboxValidator(Interface):
         """)
 
     pv = Attribute("Reference to the IMailbox which is being supported")
+
+    def __init__(self, config, section):
+        """A ConfigParser object
+        """
 
     def setup():
         """Called once before any other method except __init__
