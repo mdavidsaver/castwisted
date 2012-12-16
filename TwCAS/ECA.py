@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-        
+
 # the following derived from caerr.h in Base
 
 CA_K_INFO      =3   # successful
@@ -123,3 +123,19 @@ class CAError(Exception):
         self.code=code
     def __str__(self):
         return 'CAError: '+str(self.msg)
+
+_eca_string = {}
+
+L = locals()
+
+for A in dir():
+    if A.startswith('ECA_'):
+        V = L[A]
+        _eca_string[V] = A
+
+del A
+del L
+del V
+
+def eca_string(code):
+    return _eca_string.get(code, 'ECA_unknown')
