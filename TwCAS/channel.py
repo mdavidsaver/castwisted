@@ -236,7 +236,11 @@ class Channel(object):
             sub.error(ECA.ECA_NORDACCESS)
             return
         
-        self.pv.monitor(sub)
+        try:
+            self.pv.monitor(sub)
+        except:
+            L.exception()
+            sub.error(ECA.ECA_GETFAIL)
 
     def __eventcancel(self, cmd, dtype, dcount, p1, p2, payload):
         sub = self.__subscriptions.pop(p2, None)
@@ -260,7 +264,11 @@ class Channel(object):
         
         self.__operations[id(get)] = get
 
-        self.pv.get(get)
+        try:
+            self.pv.get(get)
+        except:
+            L.exception()
+            get.error(ECA.ECA_GETFAIL)
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
@@ -271,14 +279,21 @@ class Channel(object):
             return
 
         self.__operations[id(put)] = put
-        
-        self.pv.put(dtype, dcount, payload, put, self)
+
+        try:
+            self.pv.put(dtype, dcount, payload, put, self)
+        except:
+            L.exception()
+            put.error(ECA.ECA_GETFAIL)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
         if self.rights&2==0:
             return
-        self.pv.put(dtype, dcount, payload, None, self)
+        try:
+            self.pv.put(dtype, dcount, payload, None, self)
+        except:
+            L.exception()
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass
