@@ -14,17 +14,6 @@ from twisted.application import service
 from TwCAS.application import makeCASService, getPVFactory
 from TwCAS.util import staticserver
 
-class TwistedLogAdapter(logging.Handler):
-    def emit(self, record):
-        log.msg(self.format(record))
-
-H = TwistedLogAdapter()
-
-L = logging.getLogger()
-L.setLevel(logging.DEBUG)
-L.addHandler(H)
-
-
 class Options(usage.Options):
     optFlags = [["verbose", "v", "Verbose Logging"]
                     ]

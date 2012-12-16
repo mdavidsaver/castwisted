@@ -105,10 +105,12 @@ class Mutex(object):
     
     Clients should always use put w/ callback
     
-    Write 1 to request PV, write 0 to disconnect to release.
+    Write 1 to request PV, write 0 or disconnect to cancel/release.
     
     A client takes ownership of a Mutex when the put callback
-    completes.
+    completes successfully.  If the client wants to timeout
+    a request, and keep the channel open, then it must
+    put 0.
     
     Attempts to get or monitor DBR_INT will return 1 if the 
     mutex is locked and 0 otherwise.  Attempts to read
@@ -136,7 +138,7 @@ class Mutex(object):
         elif request.dbf==DBR.DBF.STRING:
             if self.owner:
                 C = self.owner()
-                val = '%s@%s'%(C.clientUser, C.client)
+                val = '%s@%s:%s'%(C.clientUser, C.client[0], C.client[1])
                 val = val[:40]
             else:
                 val = ''
