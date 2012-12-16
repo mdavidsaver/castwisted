@@ -163,14 +163,15 @@ class Mutex(object):
 
         ochan = None
         while len(self.contenders):
-            oreply, ochan = self.contenders.pop(0)
+            oreply = self.contenders.pop(0)
+            ochan = oreply.channel
             if not ochan.active:
                 continue
-            ochan = weakref(ochan, self._dropowner)
+            ochan = weakref.ref(ochan, self._dropowner)
             oreply.finish()
         self.owner = ochan
         if self.owner:
-            L.info("%s now owns", self.owner.client)
+            L.info("%s now owns", self.owner().client)
         else:
             L.info("Now free")
         self.notify()
@@ -183,7 +184,7 @@ class Mutex(object):
             if reply:
                 reply.error(ECA.ECA_BADTYPE)
             return
-            
+
         dbf, metaLen = DBR.dbr_info(dtype)
 
         val = DBR.valueDecode(dbf, dbrdata[metaLen:], dcount)
@@ -192,39 +193,39 @@ class Mutex(object):
         
         val, M = DBR.castDBR(DBR.DBF.LONG, dbf, val, M)
 
-        eca = None
-
         if val and chan is self.owner:
             # Recursive locking not supported
-            eca = ECA.ECA_PUTFAIL
+            reply.error(ECA.ECA_PUTFAIL)
 
         elif val and self.owner:
             # take contended mutex
-            self.contenders.append((reply,chan))
-            L.info("%s waiting", chan.client)
+            self.contenders.append(reply)
+            L.info("%s waiting", str(chan.client))
+            # Don't complete reply
 
         elif val and not self.owner:
             # take uncontended mutex
             self.owner = weakref.ref(chan, self._dropowner)
             self.notify()
-            L.info("%s takes", chan.client)
+            L.info("%s takes", str(chan.client))
+            reply.finish()
 
-        elif not val and chan is self.owner:
+        elif not val and not self.owner:
+            L.info("%s release of free mutex?", str(chan.client))
+            reply.finish()
+
+        elif not val and chan is self.owner():
             # release owned mutex
-            L.info("%s releases", self.owner.client)
-            self.owner = None
-            self.notify()
+            L.info("%s releases", self.owner().client)
+            self._dropowner(self.owner)
+            reply.finish()
 
         elif not val:
             # Cancel all pending request for this channel
-            self.contenders=filter(lambda (_,c):c is chan, self.contenders)
-            L.info("%s cancels",chan.client)
+            self.contenders=filter(lambda r:r.channel is chan, self.contenders)
+            L.info("%s cancels",str(chan.client))
+            reply.finish()
 
-        else:
-            eca = ECA.ECA_PUTFAIL
-            L.error("Logic error!")
-
-        if eca:
-            reply.error(eca)
         else:
             reply.finish()
+            L.error("Logic error!")

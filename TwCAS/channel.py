@@ -174,7 +174,11 @@ class Channel(object):
         for O in list(self.__operations.values()):
             O._close()
         self.__operations.clear()
-            
+        
+        self.__Q = []
+
+        self.write = lambda x:None
+        self.pv = None
         self.__proto = None # release strong reference (ref loop broken)
 
     def close(self):
