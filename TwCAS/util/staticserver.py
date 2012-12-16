@@ -3,6 +3,8 @@
 import logging
 L = logging.getLogger('TwCAS.staticserver')
 
+import weakref
+
 from zope.interface import implements
 
 from TwCAS.interface import INameServer, IPVServer, IPVDBR
@@ -23,7 +25,7 @@ class StaticPVServer(object):
         self._pvs = {}
 
         # Maps PV name to a list of channels
-        self._channels = defaultdict(list)
+        self._channels = defaultdict(weakref.WeakKeyDictionary)
 
     def add(self, name, PV):
         """Add a new PV to the server
@@ -53,7 +55,7 @@ class StaticPVServer(object):
             n = obj
 
         chans = self._channels.pop(n)
-        for C in chans:
+        for C in chans.keys():
             chans.close()
 
     def lookupPV(self, search):
@@ -92,5 +94,5 @@ class StaticPVServer(object):
         chan = Channel(request, PV)
         chan.options = extra
 
-        self._channels[name].append(chan)
+        self._channels[name][chan]=None
         return chan
