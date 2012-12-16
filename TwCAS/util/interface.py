@@ -90,3 +90,18 @@ class IMailboxValidator(Interface):
         chan  - The Channel from which this put originated, or
                 None for local data.
         """
+
+class IMailboxValidatorFactory(Interface):
+    """Builds a MailboxValidator using configuration from ConfigParser
+    """
+
+    name = Attribute("The unique name this factory is known by")
+
+    def build(config, name):
+        """Build a new validator instance.
+        
+        config - An instance of ConfigParser.SafeConfigParser
+        name   - The section name to use for this instance
+        
+        Returns a instance implementing IDBRPV
+        """

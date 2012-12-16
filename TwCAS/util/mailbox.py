@@ -11,9 +11,10 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
+from twisted.plugin import IPlugin
 
 from TwCAS.interface import IPVDBR
-from TwCAS.util.interface import IMailbox
+from TwCAS.util.interface import IMailbox, IMailboxValidatorFactory
 
 from TwCAS import ECA
 from TwCAS import dbr as DBR
@@ -265,3 +266,14 @@ class MailboxPV(object):
     @property
     def value(self):
         return self.__value
+
+
+
+class BasicValidatorFactory(object):
+    """For PV types which can configure themselves
+    """
+    implements(IMailboxValidatorFactory, IPlugin)
+    def __init__(self, name, pvclass):
+        self.name, self.klass = name, pvclass
+    def build(self, config, name):
+        return self.klass(config, name)

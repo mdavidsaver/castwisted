@@ -67,10 +67,10 @@ class Maker(object):
                 log.err("Unknown PV type '%s' for '%s'"%(pvtype,name))
                 continue
             try:
-                pv = factory(S, parser)
+                pv = factory.build(S, parser)
             except KeyError:
                 log.err("Failed to initialize '%s'"%name)
-                continue
+                raise
             
             server.add(name, pv)
 

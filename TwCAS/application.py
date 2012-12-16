@@ -6,12 +6,22 @@ Bits related to using TwCAS with twisted.application
 from TwCAS.caproto import SharedUDP
 from TwCAS import tcpserver, udpserver
 
+from zope.interface import Interface, Attribute, implements
+
 from TwCAS.util import pvs, mailbox, interface
 
-from twisted.plugin import getPlugins
+from twisted.plugin import getPlugins, IPlugin
 from twisted.application import internet, service
 
-__all__ = ['SharedUDPServer','makeCASService','getPVFactory']
+import plugins as _plugins
+
+__all__ = ['SharedUDPServer'
+          ,'makeCASService'
+          ,'getPVFactory'
+          ,'IPVFactory'
+          ,'DumbFactory'
+          ,'SelfFactory'
+          ]
 
 class SharedUDPServer(internet.UDPServer):
     """A UDP server using SharedUDP
@@ -45,32 +55,62 @@ def makeCASService(server, port=5064, interface=''):
     
     return caserver
 
-def mailboxFactory(name, config):
-    try:
-        validator = config.get(name, 'validator')
-    except:
-        validator = 'default'
+class IPVFactory(Interface):
+    """Builds a PV using configuration from ConfigParser
+    """
 
-    possible = getPlugins(interface.IMailbox)
-    
-    for P in possible:
-        if P.__class__.__name__==validator:
-            val = P(config, name)
-            return mailbox.MailboxPV(val)
+    name = Attribute("The unique name this factory is known by")
 
-    raise KeyError("%s: validator '%s' not found"%(name, validator))
+    def build(config, name):
+        """Build a new validator instance.
+        
+        config - An instance of ConfigParser.SafeConfigParser
+        name   - The section name to use for this instance
+        
+        Returns a instance implementing IDBRPV
+        """
 
-def _makeNullFactory(cls):
-    def factory(name, config):
-        return cls()
-    return factory
+class DumbFactory(object):
+    """For PV type which need no configuration
+    """
+    implements(IPVFactory, IPlugin)
+    def __init__(self, name, pvclass):
+        self.name, self.pvclass = name, pvclass
+    def build(self, config, name):
+        return self.pvclass()
 
-_pv_types = {
-    'Mailbox':mailboxFactory,
-    'Spam':_makeNullFactory(pvs.Spam),
-    'ClientInfo':_makeNullFactory(pvs.ClientInfo),
-    'Mutex':_makeNullFactory(pvs.Mutex),
-}
+class SelfFactory(object):
+    """For PV types which can configure themselves
+    """
+    implements(IPVFactory, IPlugin)
+    def __init__(self, name, pvclass):
+        self.name, self.pvclass = name, pvclass
+    def build(self, config, name):
+        return self.pvclass(config, name)
+
+class MailboxFactory(object):
+    """Makes MailboxPV instances
+    """
+    implements(IPVFactory, IPlugin)
+    name = "Mailbox"
+    def build(self, config, name):
+        try:
+            validator = config.get(name, 'validator')
+        except:
+            validator = 'default'
+
+        V = None
+        for P in getPlugins(interface.IMailboxValidatorFactory, _plugins):
+            if P.name == validator:
+                V = P.build(config, name)
+
+        if V is None:
+            raise KeyError("Could not find validator '%s'"%validator)
+
+        return mailbox.MailboxPV(V)
 
 def getPVFactory(name):
-    return _pv_types[name]
+    for P in getPlugins(IPVFactory, _plugins):
+        if P.name == name:
+            return P
+    raise KeyError("Could not find PVFactory '%s'"%name)
