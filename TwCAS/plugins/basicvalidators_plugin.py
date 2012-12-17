@@ -7,11 +7,9 @@ from zope.interface import implements
 
 from TwCAS.util.interface import IMailboxValidator
 from TwCAS.util.mailbox import BasicValidatorFactory
-from twisted.plugin import IPlugin
 
 from TwCAS import dbr
 from TwCAS.dbr.defs import string2DBF, DBF
-from TwCAS.dbr.xcodeMeta import _grnumparts
 
 class CommonValidator(object):
     implements(IMailboxValidator)
@@ -21,7 +19,7 @@ class CommonValidator(object):
 
         dbf = string2DBF(config.get(name, 'dbf'))
         self.nativeDBF = self.putDBF = dbf
-        
+
         if config.has_option(name, 'maxCount'):
             self.maxCount = config.getint(name, 'maxCount')
         else:
@@ -35,10 +33,10 @@ class CommonValidator(object):
         if config.has_option(name, 'VAL'):
             #TODO: make this work for string array with quoting
             IV = config.get(name, 'VAL').split(',')
-            
+
         elif dbf==DBF.STRING:
             IV = ['']
-            
+
         else:
             IV = ['0']
         IV = dbr.valueMake(dbr.DBF.STRING, IV)
@@ -92,9 +90,9 @@ class NumericValidator(CommonValidator):
             if not self.config.has_option(self.name, c):
                 continue
             val = self.config.get(self.name, c)
-            
+
             setattr(M, m, conv(val))
-        
+
         for L in _lim_sevr:
             if self.config.has_option(self.name, L):
                 setattr(self, L.lower(), int(self.config.get(self.name, L)))
@@ -119,7 +117,7 @@ class NumericValidator(CommonValidator):
             meta.status = 6 # LOW
         else:
             meta.severity = meta.status = 0
-        
+
         return (dbf, value, meta)
 
 numericfactory = BasicValidatorFactory('numeric', NumericValidator)
