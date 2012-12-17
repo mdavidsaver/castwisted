@@ -156,6 +156,7 @@ class CASTCP(StatefulProtocol):
             self.transport.write(msg)
 
     def connectionMade(self):
+        self.transport.bufferSize = 8*1024
         P = self.transport.getPeer()
         self.clientStr = '%s:%d'%(P.host, P.port)
         L.debug('Open Connection from %s', self.clientStr)
