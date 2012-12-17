@@ -1,0 +1,4 @@
+GROUP NULL TOP
+$ALIAS Alarms
+
+CHANNEL TOP numberbox
