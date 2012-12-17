@@ -58,7 +58,7 @@ x 20
 y 60
 w 60
 h 21
-controlPv "mbox"
+controlPv "$(P)mbox"
 font "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 0
@@ -108,7 +108,7 @@ x 110
 y 60
 w 80
 h 30
-controlPv "mbox"
+controlPv "$(P)mbox"
 font "helvetica-medium-r-18.0"
 fgColor index 14
 bgColor index 0
@@ -162,6 +162,30 @@ useDisplayBg
 autoHeight
 limitsFromDb
 nullColor index 0
+useHexPrefix
+newPos
+objType "monitors"
+endObjectProperties
+
+# (Text Monitor)
+object activeXTextDspClass:noedit
+beginObjectProperties
+major 4
+minor 5
+release 0
+x 50
+y 190
+w 400
+h 21
+controlPv "spam"
+font "helvetica-medium-r-18.0"
+fgColor index 14
+bgColor index 0
+useDisplayBg
+autoHeight
+limitsFromDb
+nullColor index 0
+fastUpdate
 useHexPrefix
 newPos
 objType "monitors"

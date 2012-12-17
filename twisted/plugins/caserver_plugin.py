@@ -18,9 +18,26 @@ class Options(usage.Options):
     optFlags = [["verbose", "v", "Verbose Logging"]
                     ]
     optParameters = [["ip", "", "127.0.0.1", "Address of interface"],
-                     ["port", "", "5064", "CA Server port"],
-                     ["config", "c", "", "Configuration file"],
+                     ["port", "", 5064, "CA Server port", int],
+                     ["config", "c", None, "Configuration file"],
                     ]
+
+    def __init__(self):
+        usage.Options.__init__(self)
+        self['macro'] = {}
+        self.docs['macro']="Macro definition"
+
+    def opt_macro(self, symbol):
+        var, _, val = symbol.partition('=')
+        if len(val)==0:
+            raise usage.UsageError("Malformed macro definition '%s'"%symbol)
+        self['macro'][var]=val
+
+    opt_m = opt_macro
+
+    def postOptions(self):
+        if not self["config"]:
+            raise usage.UsageError("must specify config file")
 
 class Maker(object):
     implements(service.IServiceMaker, IPlugin)
@@ -37,10 +54,9 @@ class Maker(object):
         try:
             fp = open(options['config'], 'r')
         except IOError:
-            log.err("Failed to open '%s'.  Aborting!", options['config'])
-            return None
+            raise RuntimeError("Failed to open '%s'.  Aborting!"%options['config'])
 
-        parser = Parser()
+        parser = Parser(options['macro'])
         
         parser.readfp(fp)
         fp.close()
@@ -48,7 +64,10 @@ class Maker(object):
         server = staticserver.StaticPVServer()
         
         for S in parser.sections():
-            name = S
+            if parser.has_option(S, 'name'):
+                name = parser.get(S, 'name')
+            else:
+                name= S
             rec,sep,fld = name.partition('.')
             if sep=='':
                 name+='.'
@@ -70,11 +89,11 @@ class Maker(object):
                 pv = factory.build(S, parser)
             except KeyError:
                 log.err("Failed to initialize '%s'"%name)
-                raise
+                continue
             
             server.add(name, pv)
 
-        port = int(options['port'])
+        port = options['port']
 
         return makeCASService(server, port, interface=options['ip'])
 
