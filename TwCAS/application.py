@@ -93,7 +93,7 @@ class MailboxFactory(object):
     """
     implements(IPVFactory, IPlugin)
     name = "Mailbox"
-    def build(self, config, name):
+    def build(self, name, config):
         try:
             validator = config.get(name, 'validator')
         except:
@@ -102,7 +102,7 @@ class MailboxFactory(object):
         V = None
         for P in getPlugins(interface.IMailboxValidatorFactory, _plugins):
             if P.name == validator:
-                V = P.build(config, name)
+                V = P.build(name, config)
 
         if V is None:
             raise KeyError("Could not find validator '%s'"%validator)

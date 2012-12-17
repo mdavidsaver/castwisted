@@ -20,6 +20,14 @@ from TwCAS import ECA
 from TwCAS import dbr as DBR
 from TwCAS.dbr.defs import POSIX_TIME_AT_EPICS_EPOCH
 
+class MetaDescriptor(object):
+    def __init__(self, name, default):
+        self.name, self.default = name, default
+    def __get__(self, inst, owner):
+        return getattr(inst._MailboxPV__meta, self.name, self.default)
+    #def __set__(self, inst, value):
+    #    setattr(inst._MailboxPV__meta, self.name, value)
+
 class MailboxPV(object):
     """A PV which stores DBR data of a specific type.
     
@@ -225,7 +233,7 @@ class MailboxPV(object):
         sevr = self.severity
         nsev = getattr(M, 'severity', sevr)
         stat = self.status
-        nsta = getattr(M, 'severity', stat)
+        nsta = getattr(M, 'status', stat)
         
         self.__meta.status = nsta
         self.__meta.severity = nsev
@@ -267,7 +275,16 @@ class MailboxPV(object):
     def value(self):
         return self.__value
 
+    egu = MetaDescriptor('egu', '')
+    prec = MetaDescriptor('prec', 0)
+    enums = MetaDescriptor('enums', 0)
 
+    upper_disp_limit = MetaDescriptor('upper_disp_limit', 0)
+    lower_disp_limit = MetaDescriptor('lower_disp_limit', 0)
+    upper_alarm_limit = MetaDescriptor('upper_alarm_limi', 0)
+    upper_warning_limit = MetaDescriptor('upper_warning_limit', 0)
+    lower_warning_limit = MetaDescriptor('lower_warning_limit', 0)
+    lower_alarm_limit = MetaDescriptor('lower_alarm_limit', 0)
 
 class BasicValidatorFactory(object):
     """For PV types which can configure themselves

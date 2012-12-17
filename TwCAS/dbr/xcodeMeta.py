@@ -36,13 +36,13 @@ def unpackGRInt(obj, args):
     obj.upper_warning_limit, obj.lower_warning_limit, \
     obj.upper_alarm_limit, obj.lower_alarm_limit = args
 
-__grnumparts = ['upper_disp_limit','lower_disp_limit',
+_grnumparts = ['upper_disp_limit','lower_disp_limit',
                 'upper_alarm_limit','upper_warning_limit',
                 'lower_warning_limit','lower_alarm_limit']
 
 def packGRInt(obj):
     return packSts(obj) + (getattr(obj, 'units', ''),) + \
-        tuple([getattr(obj, X, 0) for X in __grnumparts])
+        tuple([getattr(obj, X, 0) for X in _grnumparts])
 
 def unpackGRReal(obj, args):
     # status, severity, precision, units, dU, dL, aU, wU, wL, aL
@@ -54,7 +54,7 @@ def unpackGRReal(obj, args):
 def packGRReal(obj):
     return packSts(obj) + \
         (getattr(obj, 'precision', 0), getattr(obj, 'units', '')) + \
-        tuple([getattr(obj, X, 0) for X in __grnumparts])
+        tuple([getattr(obj, X, 0) for X in _grnumparts])
 
 def unpackGREnum(obj, args):
     # status, severity, #strings, 26x enum strings
