@@ -47,7 +47,7 @@ class DynamicPVServer(object):
         Called when a client is searching for a PV.
         
         Return None to indicate that this server can not provide
-            this PV at the moment.
+            this PV at the moment, but may shortly.
         Returning self.rejectPV is the same as None, but will ignore
             future requests from this client until the next cache flush.
         Return self.acceptPV indicates that this server can provide the

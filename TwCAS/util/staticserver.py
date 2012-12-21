@@ -54,7 +54,7 @@ class StaticPVServer(object):
             v = self._pvs[obj]
             n = obj
 
-        chans = self._channels.pop(n)
+        chans = self._channels.pop(n, {})
         for C in chans.keys():
             chans.close()
 
