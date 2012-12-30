@@ -39,7 +39,7 @@ class ClientInfo(object):
         msg = msg[:40]
         print 'send',msg
         msg += '\0'*(40-len(msg))
-        request.update(msg, 1)
+        request.updateDBR(msg, 1)
 
     def monitor(self, request):
         self.get(request)
@@ -71,7 +71,7 @@ class Spam(object):
         if self._check(request):
             return
         msg = request.metaLen*'\0' + self.I.pack(0)
-        request.update(msg, 1)
+        request.updateDBR(msg, 1)
 
     def monitor(self, request):
         if self._check(request):
@@ -85,7 +85,7 @@ class Spam(object):
             c = request.__count
             
             msg = request.__meta + self.I.pack(c)
-            if not request.update(msg, 1):
+            if not request.updateDBR(msg, 1):
                 # Buffer was full, message not sent
                 D = request.whenReady()
                 D.addCallback(self.kick, request)
@@ -146,7 +146,7 @@ class Mutex(object):
         data = DBR.valueMake(request.dbf, [val])
         data = DBR.valueEncode(request.dbf, data)
         
-        request.update(request.metaLen*'\0' + data, 1)
+        request.updateDBR(request.metaLen*'\0' + data, 1)
 
     def monitor(self, request):
         self.get(request)

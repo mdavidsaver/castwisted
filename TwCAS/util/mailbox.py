@@ -33,9 +33,9 @@ class MailboxPV(object):
     
     Data of other types will be converted if possible.
 
-    Sends monitor updates on value or meta-data change.
+    Sends monitor updateDBRs on value or meta-data change.
 
-    Handles update of meta-data by client.
+    Handles updateDBR of meta-data by client.
     """
     implements(IPVDBR,IMailbox)
     longStringSize = 128
@@ -109,7 +109,7 @@ class MailboxPV(object):
             request.error(ECA.ECA_BADTYPE)
             return
         elif request.dbr==DBR.DBR.CLASS_NAME:
-            request.update(self.validator.__class__.__name__[:40], 1)
+            request.updateDBR(self.validator.__class__.__name__[:40], 1)
             return
 
         try:
@@ -121,7 +121,7 @@ class MailboxPV(object):
             
             assert len(M)==request.metaLen, "Incorrect meta encoding"
             
-            request.update(M+val, dlen)
+            request.updateDBR(M+val, dlen)
 
         except ValueError:
             request.error(ECA.ECA_NOCONVERT)
@@ -251,7 +251,7 @@ class MailboxPV(object):
             self.__meta.timestamp = (int(now)-POSIX_TIME_AT_EPICS_EPOCH,
                                      int((now%1)*1e9))
 
-        # TODO: update GR and CTRL meta data
+        # TODO: updateDBR GR and CTRL meta data
         
         for M in self.__subscriptions.keys():
             if M.mask&events:

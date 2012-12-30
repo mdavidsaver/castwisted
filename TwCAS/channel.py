@@ -83,9 +83,9 @@ class SendData(object):
 
     def error(self, eca):
         junk = '\0'*DBR.dbr_size(self.dbr, self.dcount)
-        self.update(junk, self.dcount, eca)
+        self.updateDBR(junk, self.dcount, eca)
 
-    def update(self, data, dcount, eca=ECA.ECA_NORMAL):
+    def updateDBR(self, data, dcount, eca=ECA.ECA_NORMAL):
         """Send DBR data to client
         """
         chan = self.channel

@@ -123,7 +123,7 @@ class TestOperations(unittest.TestCase):
         D = self.transport.defer
         self.transport.transport.rxneeded = 2 # header and body send with seperate write() calls
         
-        self.assertTrue(get.update('\0'*8, 1))
+        self.assertTrue(get.updateDBR('\0'*8, 1))
 
         msg = yield D
 
@@ -195,7 +195,7 @@ class TestOperations(unittest.TestCase):
             D = self.transport.defer
             self.transport.transport.rxneeded = 2
 
-            monitor.update('\0'*7+chr(I), 1)
+            monitor.updateDBR('\0'*7+chr(I), 1)
 
             data = yield D
 
@@ -252,7 +252,7 @@ class TestShutdown(unittest.TestCase):
         
         self.assertTrue(monitor.complete)
         
-        self.assertFalse(monitor.update('\0'*8, 1))
+        self.assertFalse(monitor.updateDBR('\0'*8, 1))
 
         self.assertEqual(self.chan._Channel__subscriptions, {})
 
@@ -274,7 +274,7 @@ class TestShutdown(unittest.TestCase):
         
         self.assertTrue(get.complete)
         
-        self.assertFalse(get.update('\0'*8, 1))
+        self.assertFalse(get.updateDBR('\0'*8, 1))
 
     @inlineCallbacks
     def test_put(self):

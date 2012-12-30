@@ -38,7 +38,7 @@ class MockDataRequest(object):
         self.eca = eca
         self.complete = True
         self.waiter.callback(eca==ECA.ECA_NORMAL)
-    def update(self, data, dcount, eca=None):
+    def updateDBR(self, data, dcount, eca=None):
         self.result = (data, dcount)
         self.eca = eca
         self.waiter.callback(eca==ECA.ECA_NORMAL)
