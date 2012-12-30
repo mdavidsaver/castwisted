@@ -33,9 +33,9 @@ class MailboxPV(object):
     
     Data of other types will be converted if possible.
 
-    Sends monitor updateDBRs on value or meta-data change.
+    Sends monitor updates on value or meta-data change.
 
-    Handles updateDBR of meta-data by client.
+    Handles update of meta-data by client.
     """
     implements(IPVDBR,IMailbox)
     longStringSize = 128
@@ -105,23 +105,8 @@ class MailboxPV(object):
             return (dbf, count, rights)
 
     def get(self, request):
-        if request.dbr in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
-            request.error(ECA.ECA_BADTYPE)
-            return
-        elif request.dbr==DBR.DBR.CLASS_NAME:
-            request.updateDBR(self.validator.__class__.__name__[:40], 1)
-            return
-
         try:
-            val, M = DBR.convert.castDBR(request.dbf, self.dbf,
-                                         self.value, self.__meta)
-            dlen = len(val)
-            val = DBR.valueEncode(request.dbf, val)
-            M = DBR.metaEncode(request.dbr, M)
-            
-            assert len(M)==request.metaLen, "Incorrect meta encoding"
-            
-            request.updateDBR(M+val, dlen)
+            request.update(self.value, self.__meta, dbf=self.dbf)
 
         except ValueError:
             request.error(ECA.ECA_NOCONVERT)
@@ -134,29 +119,14 @@ class MailboxPV(object):
             return
         self.__subscriptions[request] = None
 
-    def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
-        if dtype in [DBR.DBR.STSACK_STRING, DBR.DBR.CLASS_NAME]:
-            if reply:
-                reply.error(ECA.ECA_BADTYPE)
-            return
-        #L.debug("Put %d %d", dtype,dcount)
-        # Alarm ACKs don't get queued.
-        if dtype in [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]:
-            if dcount!=1:
-                reply.error(ECA.ECA_PUTFAIL)
-                
-            val = DBR.valueDecode(DBR.DBR.SHORT, dbrdata, dcount)[0]
-
-            if dtype==DBR.DBR.PUT_ACKT:
-                self.__meta.ackt  = 1 if val else 0
-            elif val >= getattr(self.__meta, 'acks', 0):
-                # dtype==DBR.DBR.PUT_ACKS
+    def putAlarm(self, ackt=None, acks=None, reply=None, chan=None):
+        if ackt is not None:
+            self.__meta.ackt = 1 if ackt else 0
+        elif acks is not None:
+            if acks >= getattr(self.__meta, 'acks', 0):
                 self.__meta.acks = 0
 
-            for M in self.__subscriptions.keys():
-                if M.dbr==DBR.DBR.STSACK_STRING:
-                    self.get(M)
-            return
+    def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
 
         N = getattr(self.validator, 'putQueueLen', 1)
         
@@ -251,7 +221,7 @@ class MailboxPV(object):
             self.__meta.timestamp = (int(now)-POSIX_TIME_AT_EPICS_EPOCH,
                                      int((now%1)*1e9))
 
-        # TODO: updateDBR GR and CTRL meta data
+        # TODO: update GR and CTRL meta data
         
         for M in self.__subscriptions.keys():
             if M.mask&events:

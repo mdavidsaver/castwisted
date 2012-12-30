@@ -15,6 +15,9 @@ import dbr as DBR
 
 import caproto
 
+_invalid_get_types = [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]
+_invalid_put_types = [DBR.DBR.STSACK_STRING, DBR.DBR.CLASS_NAME]
+
 class PutNotify(object):
     def __init__(self, chan, subid, dbr, dcount):
         self.__chan = weakref.ref(chan)
@@ -63,7 +66,7 @@ class SendData(object):
     def __del__(self):
         if self.complete or not self.once:
             return
-        # Attempt to ensure that get response is sent even if this
+        # Attempt to ensure that a response is sent if this
         # request is discarded without action.
         self.error(ECA.ECA_GETFAIL)
 
@@ -279,6 +282,15 @@ class Channel(object):
 
         get = GetNotify(self, p2, dtype, dcount)
         
+        if dtype in _invalid_get_types:
+            get.error(ECA.ECA_BADTYPE)
+            return
+        elif dtype==DBR.DBR.CLASS_NAME:
+            name = getattr(self.pv, 'class_name', self.pv.__class__.__name__)
+            name = name[:39] + '\0'
+            get.updateDBR(name, 1)
+            return
+        
         if self.rights&1==0:
             get.error(ECA.ECA_NORDACCESS)
             return
@@ -291,9 +303,42 @@ class Channel(object):
             L.exception("Error in get")
             get.error(ECA.ECA_GETFAIL)
 
+    def __putAlarm(self, dtype, dcount, dbrdata, reply):
+        if dcount!=1:
+            if reply:
+                reply.error(ECA.ECA_PUTFAIL)
+            return
+            
+        val = DBR.valueDecode(DBR.DBR.SHORT, dbrdata, dcount)[0]
+        
+        try:
+            meth = self.pv.putAlarm
+        except AttributeError:
+            if reply:
+                reply.error(ECA.ECA_PUTFAIL)
+            return
+        
+        if dtype==DBR.DBR.PUT_ACKT:
+            meth(ackt=val, reply=reply, chan=self)
+        elif dtype==DBR.DBR.PUT_ACKS:
+            meth(acks=val, reply=reply, chan=self)
+        else:
+            assert False,"Logic error!"
+            
+        for M in self.__subscriptions.values():
+            if M.dbr==DBR.DBR.STSACK_STRING:
+                self.pv.get(M)
+
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
         put = PutNotify(self, p2, dtype, dcount)
+        
+        if dtype in _invalid_put_types:
+            put.error(ECA.ECA_BADTYPE)
+            return
+        elif dtype in _invalid_get_types:
+            self.__putAlarm(dtype, dcount, payload, put)
+            return
 
         if self.rights&2==0:
             put.error(ECA.ECA_NOWTACCESS)
@@ -309,6 +354,13 @@ class Channel(object):
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
+        
+        if dtype in _invalid_put_types:
+            return
+        elif dtype in _invalid_get_types:
+            self.__putAlarm(dtype, dcount, payload, None)
+            return
+
         if self.rights&2==0:
             return
         try:

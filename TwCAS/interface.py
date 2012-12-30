@@ -83,6 +83,8 @@ class IPVDBR(Interface):
     """Interface used to move DBR data to and from a PV.
     """
     
+    class_name = Attribute('String returned when clients request DBR_CLASS_NAME')
+    
     def getInfo(request):
         """Fetch channel information.
         
@@ -103,6 +105,10 @@ class IPVDBR(Interface):
         When data arrives from a remote client, chan will
         be an object implementing IChannel, or None if
         the data originated locally.
+        """
+
+    def putAlarm(ackt=None, acks=None, reply=None, chan=None):
+        """Called when the client attempts to update alarm mete-data
         """
 
     def get(reply):
