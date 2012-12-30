@@ -93,7 +93,7 @@ class IPVDBR(Interface):
         
         Succesive calls are allowed to return different results.
         
-        Returns (native_dbr, maxcount, rights)
+        Returns (native_dbf, maxcount, rights)
         """
 
     def put(dtype, dcount, dbrdata, reply=None, chan=None):

@@ -39,7 +39,7 @@ class MailboxPV(object):
     """
     implements(IPVDBR,IMailbox)
     longStringSize = 128
-    perms = 3
+    rights = 3
     
     def __init__(self, validator):
         self.validator = validator

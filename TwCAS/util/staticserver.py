@@ -91,6 +91,7 @@ class StaticPVServer(object):
         name, extra = request.__name
         L.debug('Create channel to %s'%name)
 
+        request.options = extra
         chan = Channel(request, PV)
         chan.options = extra
 

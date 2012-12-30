@@ -76,7 +76,7 @@ class DumbFactory(object):
     implements(IPVFactory, IPlugin)
     def __init__(self, name, pvclass):
         self.name, self.pvclass = name, pvclass
-    def build(self, config, name):
+    def build(self, name, config):
         return self.pvclass()
 
 class SelfFactory(object):
@@ -85,7 +85,7 @@ class SelfFactory(object):
     implements(IPVFactory, IPlugin)
     def __init__(self, name, pvclass):
         self.name, self.pvclass = name, pvclass
-    def build(self, config, name):
+    def build(self, name, config):
         return self.pvclass(config, name)
 
 class MailboxFactory(object):

@@ -95,6 +95,7 @@ class SendData(object):
         """
         if dbf is None:
             dbf = self.dbf
+        value = DBR.valueMake(dbf, value)
         val, M = DBR.convert.castDBR(self.dbf, dbf,
                                      value, meta)
         dlen = len(val)
@@ -170,7 +171,7 @@ class Channel(object):
         self.clientVersion = request.clientVersion
         self.clientUser = request.clientUser
         
-        self.dbr, self.maxCount, self.rights = PV.getInfo(request)
+        request.channel = self
         
         self.write = self.__proto.transport.write
         
@@ -179,6 +180,8 @@ class Channel(object):
         
         self.__subscriptions = {}
         self.__operations = weakref.WeakValueDictionary()
+        
+        self.dbr, self.maxCount, self.rights = PV.getInfo(request)
 
     @property
     def active(self):
@@ -350,7 +353,7 @@ class Channel(object):
             self.pv.put(dtype, dcount, payload, put, self)
         except:
             L.exception("Error in put w/ notify")
-            put.error(ECA.ECA_GETFAIL)
+            put.error(ECA.ECA_PUTFAIL)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
