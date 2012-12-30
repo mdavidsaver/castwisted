@@ -82,8 +82,25 @@ class SendData(object):
         self.complete = True
 
     def error(self, eca):
+        """Report failure of request to client
+        """
         junk = '\0'*DBR.dbr_size(self.dbr, self.dcount)
         self.updateDBR(junk, self.dcount, eca)
+
+    def update(self, value, meta, dbf=None, eca=ECA.ECA_NORMAL):
+        """Send Python data to client
+        """
+        if dbf is None:
+            dbf = self.dbf
+        val, M = DBR.convert.castDBR(self.dbf, dbf,
+                                     value, meta)
+        dlen = len(val)
+        val = DBR.valueEncode(self.dbf, val)
+        M = DBR.metaEncode(self.dbr, M)
+        
+        assert len(M)==self.metaLen, "Incorrect meta encoding"
+        
+        self.updateDBR(M+val, dlen)
 
     def updateDBR(self, data, dcount, eca=ECA.ECA_NORMAL):
         """Send DBR data to client
