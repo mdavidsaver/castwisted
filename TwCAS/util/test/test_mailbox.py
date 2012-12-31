@@ -10,9 +10,9 @@ from twisted.trial import unittest
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 
-from TwCAS.util import mailbox, pvs
+from TwCAS.util import mailbox
 from TwCAS import ECA
-from TwCAS.dbr import DBF, DBR, DBE, dbr_info
+from TwCAS.dbr import DBF, DBR, DBE, dbr_info, valueMake, convert, valueEncode, metaEncode
 
 class NullValidator(object):
     def __init__(self, dbf, maxCount, initial):
@@ -38,7 +38,21 @@ class MockDataRequest(object):
         self.eca = eca
         self.complete = True
         self.waiter.callback(eca==ECA.ECA_NORMAL)
-    def updateDBR(self, data, dcount, eca=None):
+    def update(self, value, meta, dbf=None, eca=ECA.ECA_NORMAL):
+        if dbf is None:
+            dbf = self.dbf
+        value = valueMake(dbf, value)
+        val, M = convert.castDBR(self.dbf, dbf,
+                                     value, meta)
+        dlen = len(val)
+        val = valueEncode(self.dbf, val)
+        M = metaEncode(self.dbr, M)
+        
+        assert len(M)==self.metaLen, "Incorrect meta encoding"
+        
+        self.updateDBR(M+val, dlen)
+        
+    def updateDBR(self, data, dcount, dbf=None, eca=None):
         self.result = (data, dcount)
         self.eca = eca
         self.waiter.callback(eca==ECA.ECA_NORMAL)
