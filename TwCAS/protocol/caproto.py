@@ -63,6 +63,11 @@ __ipaddr = Struct('!I')
 def addr2int(addr):
     I, = __ipaddr.unpack(socket.inet_aton(addr))
     return I
+def int2addr(num):
+    """
+    Convert a 32-bit integer in MSB order to a IP string
+    """
+    return socket.inet_ntoa(__ipaddr.pack(num))
 
 class SharedUDP(Port):
     """A UDP socket which can share
