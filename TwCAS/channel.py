@@ -339,8 +339,16 @@ class Channel(object):
         else:
             assert False,"Logic error!"
 
+    def __putCheck(self, dtype, dcount, paylen):
+        expectedcount = DBR.dbr_count(dtype, paylen)
+        if dcount not in (expectedcount, expectedcount+1):
+            raise caproto.CAProtoFault(
+                'Bad length %u %u %u (%u)'%
+                (paylen, dtype, dcount, expectedcount)
+            )
+
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
-        # TODO: Check consistency of len(payload) and dtype+dcount
+        self.__putCheck(dtype, dcount, len(payload))
         put = PutNotify(self, p2, dtype, dcount)
         
         if dtype in _invalid_put_types:
@@ -363,7 +371,7 @@ class Channel(object):
             put.error(ECA.ECA_PUTFAIL)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
-        # TODO: Check consistency of len(payload) and dtype+dcount
+        self.__putCheck(dtype, dcount, len(payload))
         
         if dtype in _invalid_put_types:
             return
