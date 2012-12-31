@@ -111,7 +111,8 @@ class SessionBase(object):
         L.error("Put not implemented by %s", self.__class__.__name__)
 
     def putAlarm(self, ackt=None, acks=None, reply=None, chan=None):
-        pass
+        if reply:
+            reply.error(ECA.ECA_PUTFAIL)
 
     def get(self, request):
         L.error('Get not implemented by %s', self.__class__.__name__)

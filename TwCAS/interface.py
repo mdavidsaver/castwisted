@@ -100,7 +100,7 @@ class IPVDBR(Interface):
         """Called when a put request is received.
         
         If the client requests completion notification then
-        the reply argument will be a @PutNotify instance.
+        the reply argument will implement IPVOperation.
         
         When data arrives from a remote client, chan will
         be an object implementing IChannel, or None if
@@ -108,20 +108,23 @@ class IPVDBR(Interface):
         """
 
     def putAlarm(ackt=None, acks=None, reply=None, chan=None):
-        """Called when the client attempts to update alarm mete-data
+        """Called when the client attempts to update alarm mete-data.
+        
+        If the client requests completion notification then
+        the reply argument will implement IPVOperation.
         """
 
     def get(reply):
         """Called when a get request is received.
         
-        The reply argument will be a @GetNotify instance used to communicate
+        The reply argument will implement IPVOperation, and be used to communicate
         the result to the client.
         """
 
     def monitor(reply):
-        """Called when a get request is received.
+        """Called when a new subscription is created (IPVOperation)
         
-        The reply argument will be a @Subscription instance used to communicate
+        The reply argument will implement IPVOperation, and be used to communicate
         the results to the client.
         """
 
@@ -135,3 +138,63 @@ class IPVRequest(Interface):
     clientVersion = Attribute("Protocol version used by this client")
 
     replied = Attribute("Reply to request has been sent")
+
+class IPVOperation(Interface):
+    """Represents an in-progress get, put, or monitor operation
+    """
+    
+    channel = Attribute('The IChannel which received the request')
+
+    dbr = Attribute('DBR type of the request')
+    dbf = Attribute('DBF value type of the request')
+    dcount = Attribute('Number of value elements')
+    metaLen = Attribute('Meta-data length in bytes')
+
+    complete = Attribute('True if this request has been completely fulfilled')
+    
+    dynamic = Attribute('''Can the client accept dynamic arrays?
+    For get and monitor requests only.''')
+
+    def error(eca):
+        """Send a failure message to the client.
+        """
+
+    def finish():
+        """Indicate normal completion of a put request.
+        """
+
+    def update(value, meta, dbf=None):
+        """Send a data update
+        
+        Get and monitor requests only.
+        
+        value should be a list of strings, ArrayType, or numpy.ndarray
+        
+        dbf must be given unless value needs no conversion
+        
+        Returns False if the update could not be placed
+        in the send buffer because of size.
+        """
+
+    def updateDBR(data, dcount):
+        """Send a data update
+        
+        Get and monitor requests only.
+        
+        Sends DBR data, assumed to be in big endian byte order.
+        
+        Returns False if the update could not be placed
+        in the send buffer because of size.
+        """
+
+    def whenReady():
+        """Returns a Deferred which will fire when
+        the send buffer has emptied enough to accept
+        another update.
+        
+        Note that update() or updateDBR() should _never_ be
+        called from a callback attached to this Deferred.
+        Instead use something like reactor.callLater
+        
+        See TwCAS.utils.pvs.Spam for an example
+        """

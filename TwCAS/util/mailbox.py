@@ -126,6 +126,13 @@ class MailboxPV(object):
             if acks >= getattr(self.__meta, 'acks', 0):
                 self.__meta.acks = 0
 
+        for M in self.__subscriptions.keys():
+            if M.dbr==DBR.DBR.STSACK_STRING:
+                self.pv.get(M)
+
+        if reply:
+            reply.finish()
+
     def put(self, dtype, dcount, dbrdata, reply=None, chan=None):
 
         N = getattr(self.validator, 'putQueueLen', 1)

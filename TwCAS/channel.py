@@ -11,6 +11,8 @@ from twisted.internet.protocol import connectionDone
 from TwCAS import PrefixLogger, getLogger
 L = getLogger(__name__)
 
+from interface import IPVOperation
+
 import ECA
 import dbr as DBR
 
@@ -20,9 +22,11 @@ _invalid_get_types = [DBR.DBR.PUT_ACKT, DBR.DBR.PUT_ACKS]
 _invalid_put_types = [DBR.DBR.STSACK_STRING, DBR.DBR.CLASS_NAME]
 
 class PutNotify(object):
+    implements(IPVOperation)
     def __init__(self, chan, subid, dbr, dcount):
         self.__chan = weakref.ref(chan)
         self.dbr, self.dcount = dbr, dcount
+        self.dbf, self.metaLen = DBR.dbr_info(dbr)
         self.subid = subid
         self.complete = False
 
@@ -55,6 +59,7 @@ class PutNotify(object):
 
 
 class SendData(object):
+    implements(IPVOperation)
     def __init__(self, chan, subid, dbr, dcount, mask=-1):
         self.__chan = weakref.ref(chan)
         self.dbr, self.dcount = dbr, min(dcount, chan.maxCount)
@@ -105,7 +110,7 @@ class SendData(object):
         
         assert len(M)==self.metaLen, "Incorrect meta encoding"
         
-        self.updateDBR(M+val, dlen)
+        return self.updateDBR(M+val, dlen)
 
     def updateDBR(self, data, dcount, eca=ECA.ECA_NORMAL):
         """Send DBR data to client
@@ -333,13 +338,6 @@ class Channel(object):
             meth(acks=val, reply=reply, chan=self)
         else:
             assert False,"Logic error!"
-            
-        for M in self.__subscriptions.values():
-            if M.dbr==DBR.DBR.STSACK_STRING:
-                self.pv.get(M)
-
-        if reply:
-            reply.finish()
 
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
