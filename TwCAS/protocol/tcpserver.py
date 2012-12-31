@@ -9,6 +9,7 @@ import weakref
 
 from zope.interface import implements
 
+from twisted.internet import reactor
 from twisted.internet.error import ConnectionDone
 from twisted.internet.protocol import ServerFactory
 from twisted.protocols.stateful import StatefulProtocol
@@ -103,6 +104,9 @@ class PVConnect(object):
 class CASTCP(StatefulProtocol):
     implements(IPushProducer)
     
+    # Circuit inactivity timeout
+    timeout = 60.0
+    
     def __init__(self, pvserver, prio=0, nameserv=None, localport=-1):
         self.L = PrefixLogger(L, self)
 
@@ -172,6 +176,9 @@ class CASTCP(StatefulProtocol):
         C.registerProducer(self, True)
         msg = caheader.pack(0, 0, self.prio, caproto.VERSION, 0, 0)
         self.transport.write(msg)
+        
+        self.inactivity = reactor.callLater(self.timeout,
+                                            self.transport.loseConnection)
 
     def connectionLost(self, reason):
         self.L.debug('Close Connection')
@@ -184,6 +191,11 @@ class CASTCP(StatefulProtocol):
         # at this point the circuit object is defuct...
         self.__channels = None
         self.pmux = None
+        try:
+            I, self.inactivity = self.inactivity, None
+            I.cancel()
+        except:
+            pass
 
     def resumeProducing(self):
         self.transport.bufferFull = False
@@ -200,6 +212,8 @@ class CASTCP(StatefulProtocol):
     def header1(self, data):
         """Begin message processing with short header
         """
+        self.inactivity.reset(self.timeout)
+
         cmd, blen, dtype, dcount, p1, p2 = caheader.unpack(data)
 
         if blen==0:
