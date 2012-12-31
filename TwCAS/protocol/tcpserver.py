@@ -134,7 +134,7 @@ class CASTCP(StatefulProtocol):
         self.__nextchanid = 2 # start a 2 so we avoid sid==ECA_NORMAL
         self.__channels = {}
         
-        self.pmux = None
+        self.pmux, self.inactivity = None, None
 
     @property
     def connected(self):
@@ -166,20 +166,24 @@ class CASTCP(StatefulProtocol):
         self.transport.bufferSize = 8*1024
         P = self.transport.getPeer()
         self.clientStr = '%s:%d'%(P.host, P.port)
+
         self.L.debug('Open Connection from %s', self.clientStr)
+
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
+
         self.transport.bufferFull = False # flag used by PVSearch
         self.pmux = MuxProducer(self.transport)
         C = self.pmux.getConsumer()
         C.registerProducer(self, True)
-        msg = caheader.pack(0, 0, self.prio, caproto.VERSION, 0, 0)
-        self.transport.write(msg)
-        
+
         self.inactivity = reactor.callLater(self.timeout,
                                             self.transport.loseConnection)
 
+        msg = caheader.pack(0, 0, self.prio, caproto.VERSION, 0, 0)
+        self.transport.write(msg)
+        
     def connectionLost(self, reason):
         self.L.debug('Close Connection')
         if reason.check(ConnectionDone):
@@ -191,11 +195,9 @@ class CASTCP(StatefulProtocol):
         # at this point the circuit object is defuct...
         self.__channels = None
         self.pmux = None
-        try:
-            I, self.inactivity = self.inactivity, None
+        I, self.inactivity = self.inactivity, None
+        if not I.called and not I.cancelled:
             I.cancel()
-        except:
-            pass
 
     def resumeProducing(self):
         self.transport.bufferFull = False

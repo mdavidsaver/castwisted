@@ -111,6 +111,8 @@ class TestConnect(unittest.TestCase):
         self.assertEqual(self.proto.peerVersion, caproto.VERSION+1)
         self.assertEqual(self.proto.peerUser, 'someone')
 
+        self.proto.connectionLost(reason=protocol.connectionDone)
+
 class TestCASChannel(unittest.TestCase):
     
     timeout = 1.0
@@ -123,6 +125,9 @@ class TestCASChannel(unittest.TestCase):
 
         self.proto.peerVersion = caproto.VERSION+1
         self.proto.peerUser = 'someone'
+
+    def tearDown(self):
+        self.proto.connectionLost(reason=protocol.connectionDone)
 
     @inlineCallbacks
     def test_create(self):
