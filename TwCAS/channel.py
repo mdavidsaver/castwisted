@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import weakref
-import logging
-L = logging.getLogger('TwCAS.protocol')
 
 from zope.interface import implements
 from interface import IChannel
 
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import connectionDone
+
+from TwCAS import PrefixLogger, getLogger
+L = getLogger(__name__)
 
 import ECA
 import dbr as DBR
@@ -161,10 +162,11 @@ class GetNotify(SendData):
 class Channel(object):
     implements(IChannel)
 
-    def __init__(self, request, PV, qsize=4):
+    def __init__(self, request, PV, qsize=4, pvname=None):
+        self.L = PrefixLogger(L, self)
         self.__proto = request.getCircuit() # take strong reference (ref loop created)
         assert self.__proto is not None
-        self.pv = PV
+        self.pv, self.pvname = PV, pvname
         self.cid = request.cid
         self.sid = request.sid
         self.client = request.client
@@ -248,10 +250,10 @@ class Channel(object):
 
     def __eventadd(self, cmd, dtype, dcount, p1, p2, payload):
         if p2 in self.__subscriptions:
-            L.error('%s trying to reuse an active subscription ID'%self.getCircuit().clientStr)
+            self.L.error('%s trying to reuse an active subscription ID'%self.getCircuit().clientStr)
             return
         if len(payload) < caproto.casubscript.size:
-            L.error('%s tried to create subscription without proper payload'%self.getCircuit().clientStr)
+            self.L.error('%s tried to create subscription without proper payload'%self.getCircuit().clientStr)
             return
         mask, = caproto.casubscript.unpack(payload)
             
@@ -266,13 +268,13 @@ class Channel(object):
         try:
             self.pv.monitor(sub)
         except:
-            L.exception("Error starting monitor")
+            self.L.exception("Error starting monitor")
             sub.error(ECA.ECA_GETFAIL)
 
     def __eventcancel(self, cmd, dtype, dcount, p1, p2, payload):
         sub = self.__subscriptions.pop(p2, None)
         if sub is None:
-            L.error('%s trying to cancel unused subscription ID'%self.getCircuit().clientStr)
+            self.L.error('%s trying to cancel unused subscription ID'%self.getCircuit().clientStr)
             return
 
         msg = caproto.caheader.pack(1, 0, sub.dbr, sub.dcount, self.sid, sub.subid)
@@ -303,7 +305,7 @@ class Channel(object):
         try:
             self.pv.get(get)
         except:
-            L.exception("Error in get")
+            self.L.exception("Error in get")
             get.error(ECA.ECA_GETFAIL)
 
     def __putAlarm(self, dtype, dcount, dbrdata, reply):
@@ -352,7 +354,7 @@ class Channel(object):
         try:
             self.pv.put(dtype, dcount, payload, put, self)
         except:
-            L.exception("Error in put w/ notify")
+            self.L.exception("Error in put w/ notify")
             put.error(ECA.ECA_PUTFAIL)
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
@@ -369,7 +371,7 @@ class Channel(object):
         try:
             self.pv.put(dtype, dcount, payload, None, self)
         except:
-            L.exception("Error in put")
+            self.L.exception("Error in put")
 
     def __ignore(self, cmd, dtype, dcount, p1, p2, payload):
         pass
@@ -382,9 +384,15 @@ class Channel(object):
         19: __putnotify, # Write w/ notify
     }
 
-    def __unicode__(self):
-        if self.__proto is None:
-            return u'Channel %s for <disconnected>'%(self.pv)
+    def __str__(self):
+        if self.pvname is None:
+            name = '%d,%d'%(self.sid, self.cid)
         else:
-            P = self.getPeer()
-            return u'Channel %s for %s:%d' % (self.pv, P.host, P.port)
+            name = self.pvname
+        msg = u'Chan to %s from %s@%s:%d'% \
+            (name, self.clientUser) + self.client
+        if self.__proto is None:
+            msg += u'Inactive '
+        return msg
+    def __repr__(self):
+        return self.__str__()

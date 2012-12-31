@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-L = logging.getLogger('TwCAS.service')
+L = logging.getLogger('TwCAS.service.core')
 
 import weakref
 

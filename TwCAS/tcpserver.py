@@ -6,8 +6,6 @@ Created on Sun Jul 29 16:04:17 2012
 """
 
 import weakref
-import logging
-L = logging.getLogger('TwCAS.protocol')
 
 from zope.interface import implements
 
@@ -16,6 +14,9 @@ from twisted.internet.protocol import ServerFactory
 from twisted.protocols.stateful import StatefulProtocol
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
+
+from TwCAS import PrefixLogger, getLogger
+L = getLogger(__name__)
 
 from interface import INameServer, IPVServer, IPVRequest
 
@@ -103,6 +104,8 @@ class CASTCP(StatefulProtocol):
     implements(IPushProducer)
     
     def __init__(self, pvserver, prio=0, nameserv=None, localport=-1):
+        self.L = PrefixLogger(L, self)
+
         assert localport>0, "Invalid local server port"
         self.pvserv = pvserver
         assert IPVServer.providedBy(pvserver)
@@ -159,7 +162,7 @@ class CASTCP(StatefulProtocol):
         self.transport.bufferSize = 8*1024
         P = self.transport.getPeer()
         self.clientStr = '%s:%d'%(P.host, P.port)
-        L.debug('Open Connection from %s', self.clientStr)
+        self.L.debug('Open Connection from %s', self.clientStr)
         # before Base 3.14.12 servers didn't send version until client authenticated
         # from 3.14.12 clients attempting to do TCP name resolution don't authenticate
         # but expect a version message immediately
@@ -171,7 +174,7 @@ class CASTCP(StatefulProtocol):
         self.transport.write(msg)
 
     def connectionLost(self, reason):
-        L.debug('Close Connection from %s', self.transport.getPeer())
+        self.L.debug('Close Connection')
         if reason.check(ConnectionDone):
             self.onShutdown.callback(None)
         else:
@@ -234,17 +237,17 @@ class CASTCP(StatefulProtocol):
         return (self.header1, caheader.size)
 
     def __process(self, cmd, *args, **kws):
-        #L.debug("RX message %d",cmd)
+        #self.L.debug("RX message %d",cmd)
         try:
             self.__dispatch.get(cmd, self.__ignore)(self, cmd, *args, **kws)
         except caproto.CAProtoFault,e:
-            L.fatal('Connection from %s closed after protocol error: %s', self.clientStr,e)
+            self.L.fatal('Connection closed after protocol error: %s',e)
             self.transport.loseConnection()
         except:
-            L.exception('Error processing message %d from: %s', cmd, self.clientStr)
+            self.L.exception('Error processing message %d', cmd)
 
     def __ignore(self, junk, cmd, *args, **kws):
-        L.debug('Unexpected TCP message %d from %s', cmd, self.clientStr)
+        self.L.debug('Unexpected TCP message %d', cmd)
 
     def __echo(self, cmd, dtype, dcount, p1, p2, payload):
         msg = caproto.caheader.pack(23, 0, 0, 0, 0, 0)
@@ -253,11 +256,11 @@ class CASTCP(StatefulProtocol):
     def __version(self, cmd, dtype, dcount, p1, p2, payload):
         self.prio = max(self.prio, dtype)
         self.peerVersion = dcount
-        L.info('%s has version %d and wants priority %d', self.clientStr, dcount, dtype)
+        self.L.info('Has version %d and wants priority %d', dcount, dtype)
 
     def __user(self, cmd, dtype, dcount, p1, p2, payload):
         self.peerUser = str(payload).strip('\0')
-        L.info("%s is user '%s'", self.clientStr, self.peerUser)
+        self.L.info("Identifies")
 
     def __host(self, cmd, dtype, dcount, p1, p2, payload):
         # We don't trust the peer to self identify
@@ -266,8 +269,8 @@ class CASTCP(StatefulProtocol):
     def __create(self, cmd, dtype, dcount, p1, p2, payload):
         pv = str(payload).strip('\0')
         if self.peerVersion != p2:
-            L.warn('%s attempted to change version from %d to %d',
-                   self.clientStr, self.peerVersion, p2)
+            self.L.warn('attempts to change version from %d to %d',
+                   self.peerVersion, p2)
 
         P = self.transport.getPeer()
 
@@ -287,14 +290,13 @@ class CASTCP(StatefulProtocol):
     def __clear(self, cmd, dtype, dcount, p1, p2, payload):
         chan = self.__channels.pop(p1, None)
         if chan is None:
-            L.warn('%s attempts to close channel %d which does not exist',
-                   self.clientStr, p1)
+            self.L.warn('Attempts to close unknown channel %d', p1)
             return
 
         try:
             if p2 != chan.cid:
-                L.error('%s disconnects %d using cid %d instead of %d',
-                       self.clientStr, p2, chan.cid)
+                self.L.error('disconnects %d using cid %d instead of %d',
+                       p2, chan.cid)
 
             msg = caheader.pack(12, 0, 0, 0, p1, p2)
             
@@ -308,7 +310,7 @@ class CASTCP(StatefulProtocol):
         """
         chan = self.__channels.get(p1, None)
         if chan is None:
-            L.error("Client innitiated operation on unknown channel: %s",
+            self.L.error("Client innitiated operation on unknown channel: %s",
                     (cmd, dtype, dcount, p1, p2))
             return
 
@@ -317,7 +319,7 @@ class CASTCP(StatefulProtocol):
         except caproto.CAProtoFault:
             raise
         except:
-            L.exception("Exception for message %s sent to channel %s",
+            self.L.exception("Exception for message %s sent to channel %s",
                         (cmd, dtype, dcount, p1, p2), chan)
             return
 
@@ -341,13 +343,15 @@ class CASTCP(StatefulProtocol):
         23: __echo
     }
 
-    def __unicode__(self):
+    def __str__(self):
         if self.pmux is not None:
-            return u'Circuit(%s)' % self.clientStr
+            return u'Circuit(%s@%s)' % (self.peerUser,self.clientStr)
         elif self.__channels is not None:
             return u'Circuit(OPENING)'
         else:
             return u'Circuit(CLOSED)'
+    def __repr__(self):
+        return self.__str__()
 
 class CASTCPServer(ServerFactory):
     def __init__(self, port, pvserver, prio=0, nameserv=None):
@@ -364,7 +368,7 @@ class CASTCPServer(ServerFactory):
                 C.transport.loseConnection()
 
     def buildProtocol(self, addr):
-        L.debug('Building connection from %s',addr)
+        L.debug('Building connection from %s:%d',addr.host,addr.port)
         proto = CASTCP(self.pvserver, prio=0, nameserv=self.nameserv,
                        localport=self.localport)
         self.__circuits[id(proto)]=proto
