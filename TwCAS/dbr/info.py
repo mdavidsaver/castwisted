@@ -18,7 +18,9 @@ _dbf_element_size={DBF.STRING:40,
                    DBF.DOUBLE:8
                   }
 def dbf_element_size(dbf):
-    """Return the element size in bytes of the given DBF type
+    """Return the element size in bytes of the given DBF type.
+    
+    Unknown types have size 1 byte (aka CHAR)
     """
     return _dbf_element_size.get(dbf, 1)
 
@@ -72,9 +74,9 @@ _dbr_info = {
 def dbr_info(dbr):
     """Returns a tuple (DBF, MetaLen)
     
-    Gives the element
+    Unknown DBR types are treated as char arrays w/o meta-data
     """
-    return _dbr_info.get(dbr, (-1, 0))
+    return _dbr_info.get(dbr, (DBF.CHAR, 0))
 
 def dbr_size(dtype, dcount, pad=False):
     """Compute size of encoded DBR data
