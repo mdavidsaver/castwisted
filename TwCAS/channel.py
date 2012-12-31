@@ -334,6 +334,9 @@ class Channel(object):
             if M.dbr==DBR.DBR.STSACK_STRING:
                 self.pv.get(M)
 
+        if reply:
+            reply.finish()
+
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         # TODO: Check consistency of len(payload) and dtype+dcount
         put = PutNotify(self, p2, dtype, dcount)
