@@ -3,24 +3,18 @@
 import logging
 L = logging.getLogger('TwCAS.service')
 
-import weakref, time
-
-from TwCAS.dbr.xcodeValue import np
+import weakref
 
 from zope.interface import Interface, Attribute, implements
 
-from twisted.internet import reactor
-from twisted.internet.defer import Deferred
 from twisted.plugin import IPlugin, getPlugins
 
 from TwCAS.interface import IPVDBR
-from TwCAS.util.interface import IMailbox, IMailboxValidatorFactory
 
 import TwCAS.plugins as _plugins
 
 from TwCAS import ECA
 from TwCAS import dbr as DBR
-from TwCAS.dbr.defs import POSIX_TIME_AT_EPICS_EPOCH
 
 __all__ = [
     'DefaultService',
