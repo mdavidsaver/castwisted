@@ -3,12 +3,12 @@
 Bits related to using TwCAS with twisted.application
 """
 
-from TwCAS.caproto import SharedUDP
-from TwCAS import tcpserver, udpserver
+from TwCAS.protocol.caproto import SharedUDP
+from TwCAS.protocol import tcpserver, udpserver
 
 from zope.interface import Interface, Attribute, implements
 
-from TwCAS.util import pvs, mailbox, interface
+from TwCAS.util import mailbox, interface
 
 from twisted.plugin import getPlugins, IPlugin
 from twisted.application import internet, service

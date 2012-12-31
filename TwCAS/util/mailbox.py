@@ -13,10 +13,10 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.plugin import IPlugin
 
-from TwCAS.interface import IPVDBR
+from TwCAS.protocol.interface import IPVDBR
 from TwCAS.util.interface import IMailbox, IMailboxValidatorFactory
 
-from TwCAS import ECA
+from TwCAS.protocol import ECA
 from TwCAS import dbr as DBR
 from TwCAS.dbr.defs import POSIX_TIME_AT_EPICS_EPOCH
 

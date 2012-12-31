@@ -2,16 +2,14 @@
 
 from zope.interface import implements
 
-import weakref
-
 from twisted.trial import unittest
 from twisted.internet.defer import Deferred, inlineCallbacks
 
-from TwCAS.interface import IPVRequest, IPVDBR
+from TwCAS.protocol.interface import IPVRequest, IPVDBR
 
-from TwCAS import channel as chan
+from TwCAS.protocol import channel as chan
 
-from TwCAS import helptest, ECA
+from TwCAS.protocol import helptest, ECA
 
 class MockCircuit(object):
     paused = False

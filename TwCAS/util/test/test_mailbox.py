@@ -11,7 +11,7 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from TwCAS.util import mailbox
-from TwCAS import ECA
+from TwCAS.protocol import ECA
 from TwCAS.dbr import DBF, DBR, DBE, dbr_info, valueMake, convert, valueEncode, metaEncode
 
 class NullValidator(object):

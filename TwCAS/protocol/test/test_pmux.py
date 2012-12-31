@@ -9,8 +9,8 @@ from twisted.internet.protocol import Protocol
 from twisted.internet.defer import Deferred, inlineCallbacks, CancelledError
 from twisted.internet import error
 
-from TwCAS.PMux import MuxProducer
-from TwCAS import pair
+from TwCAS.protocol.PMux import MuxProducer
+from TwCAS.protocol import pair
 
 class MockConsumer(object):
     implements(IConsumer)

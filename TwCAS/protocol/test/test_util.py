@@ -7,7 +7,7 @@ Created on Sun Jul 29 13:20:36 2012
 
 from twisted.trial import unittest
 
-from TwCAS import caproto, helptest
+from TwCAS.protocol import caproto, helptest
 
 class TestProto(unittest.TestCase):
     

@@ -7,11 +7,11 @@ import weakref
 
 from zope.interface import implements
 
-from TwCAS.interface import INameServer, IPVServer, IPVDBR
+from TwCAS.protocol.interface import INameServer, IPVServer, IPVDBR
 
 from collections import defaultdict
 
-from TwCAS.channel import Channel
+from TwCAS.protocol.channel import Channel
 from TwCAS.util import splitPVName, InvalidPVNameError
 
 class StaticPVServer(object):

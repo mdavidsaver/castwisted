@@ -7,10 +7,9 @@ Created on Sun Jul 29 11:54:16 2012
 
 from zope.interface import implements
 
-from TwCAS import udpserver
-from TwCAS import helptest
-from TwCAS.caproto import VERSION, padMsg
-from TwCAS.interface import INameServer
+from TwCAS.protocol import udpserver, helptest
+from TwCAS.protocol.caproto import VERSION, padMsg
+from TwCAS.protocol.interface import INameServer
 
 from twisted.internet.defer import Deferred
 from twisted.trial import unittest

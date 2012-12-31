@@ -9,9 +9,9 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 
-from TwCAS.interface import IPVDBR
+from TwCAS.protocol.interface import IPVDBR
 
-from TwCAS import ECA
+from TwCAS.protocol import ECA
 from TwCAS import dbr as DBR
 
 __all__ = ['ClientInfo'

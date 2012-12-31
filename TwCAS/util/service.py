@@ -9,11 +9,11 @@ from zope.interface import Interface, Attribute, implements
 
 from twisted.plugin import IPlugin, getPlugins
 
-from TwCAS.interface import IPVDBR
+from TwCAS.protocol.interface import IPVDBR
 
 import TwCAS.plugins as _plugins
 
-from TwCAS import ECA
+from TwCAS.protocol import ECA
 from TwCAS import dbr as DBR
 
 __all__ = [

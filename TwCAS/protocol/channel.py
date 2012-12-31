@@ -14,7 +14,7 @@ L = getLogger(__name__)
 from interface import IPVOperation
 
 import ECA
-import dbr as DBR
+import TwCAS.dbr as DBR
 
 import caproto
 

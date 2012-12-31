@@ -2,9 +2,9 @@
 
 from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
-from twisted.internet.defer import Deferred, DeferredList, inlineCallbacks
+from twisted.internet.defer import Deferred, inlineCallbacks
 
-from TwCAS import pair
+from TwCAS.protocol import pair
 
 class PP(Protocol):
     connected=False

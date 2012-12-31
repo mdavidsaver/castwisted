@@ -7,9 +7,9 @@ from zope.interface import implements
 
 from twisted.internet import reactor
 
-from TwCAS.interface import INameServer, IPVServer, IPVDBR
+from TwCAS.protocol.interface import INameServer, IPVServer, IPVDBR
 
-from TwCAS.channel import Channel
+from TwCAS.protocol.channel import Channel
 from TwCAS.util import splitPVName, InvalidPVNameError
 
 class _CacheEntry(object):

@@ -13,11 +13,11 @@ from twisted.trial import unittest
 from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet import reactor, protocol
 
-from TwCAS.interface import INameServer, IPVServer, IChannel, IPVDBR
+from TwCAS.protocol.interface import INameServer, IPVServer, IChannel, IPVDBR
 
-from TwCAS import tcpserver, helptest, caproto
+from TwCAS.protocol import tcpserver, helptest, caproto
 
-from TwCAS.helptest import makeCA, checkCA
+from TwCAS.protocol.helptest import makeCA, checkCA
 
 class TestPV(object):
     implements(IPVDBR)
