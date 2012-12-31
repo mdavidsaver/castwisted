@@ -7,7 +7,7 @@ Created on Sun Jul 29 10:33:03 2012
 
 import weakref
 import logging
-L = logging.getLogger('TwCAS.protocol')
+L = logging.getLogger(__name__)
 
 from zope.interface import implements
 

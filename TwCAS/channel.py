@@ -267,6 +267,8 @@ class Channel(object):
         
         try:
             self.pv.monitor(sub)
+            self.L.debug("Create subscription %d for %d,%d,%d",
+                         sub.subid, dtype, dcount, mask)
         except:
             self.L.exception("Error starting monitor")
             sub.error(ECA.ECA_GETFAIL)
@@ -278,10 +280,12 @@ class Channel(object):
             return
 
         msg = caproto.caheader.pack(1, 0, sub.dbr, sub.dcount, self.sid, sub.subid)
-        
+
         self.getCircuit().write(msg)
         
         sub._close()
+        
+        self.L.debug('Cancel subscription %d', sub.subid)
 
     def __getnotify(self, cmd, dtype, dcount, p1, p2, payload):
 
@@ -392,10 +396,10 @@ class Channel(object):
             name = '%d,%d'%(self.sid, self.cid)
         else:
             name = self.pvname
-        msg = u'Chan to %s from %s@%s:%d'% \
-            (name, self.clientUser) + self.client
+        msg = 'Chan to %s from %s@%s:%d'% \
+            ((name, self.clientUser) + self.client)
         if self.__proto is None:
-            msg += u'Inactive '
+            msg += 'Inactive '
         return msg
     def __repr__(self):
         return self.__str__()

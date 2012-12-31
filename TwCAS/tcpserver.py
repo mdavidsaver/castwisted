@@ -345,11 +345,11 @@ class CASTCP(StatefulProtocol):
 
     def __str__(self):
         if self.pmux is not None:
-            return u'Circuit(%s@%s)' % (self.peerUser,self.clientStr)
+            return u'%s@%s' % (self.peerUser,self.clientStr)
         elif self.__channels is not None:
-            return u'Circuit(OPENING)'
+            return u'OPENING'
         else:
-            return u'Circuit(CLOSED)'
+            return u'CLOSED'
     def __repr__(self):
         return self.__str__()
 

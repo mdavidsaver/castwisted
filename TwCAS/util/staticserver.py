@@ -65,7 +65,7 @@ class StaticPVServer(object):
         except InvalidPVNameError:
             search.disclaim()
             return
-        L.debug('Lookup %s'%name)
+        L.debug('%s:%d: Lookup %s'% (search.client + (name,)))
         if name in self._pvs:
             search.claim()
         else:
@@ -78,7 +78,7 @@ class StaticPVServer(object):
         except InvalidPVNameError:
             request.disclaim()
             return
-        L.debug('Connect %s'%name)
+        L.debug('%s@%s:%d: Connects %s'%((request.clientUser,)+request.client+(name,)))
         pv = self._pvs.get(name, None)
         if pv is None:
             request.disclaim()
@@ -89,10 +89,10 @@ class StaticPVServer(object):
 
     def buildChannel(self, request, PV):
         name, extra = request.__name
-        L.debug('Create channel to %s'%name)
+        #L.debug('Create channel to %s'%name)
 
         request.options = extra
-        chan = Channel(request, PV)
+        chan = Channel(request, PV, pvname=name)
         chan.options = extra
 
         self._channels[name][chan]=None

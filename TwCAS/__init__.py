@@ -38,3 +38,5 @@ class PrefixLogger(object):
         
     def exception(self, msg, *args):
         self.error(*((msg,) + args), **{'exc_info': 1})
+
+    warn = warning

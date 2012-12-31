@@ -91,7 +91,7 @@ class SessionBase(object):
 
     def getInfo(self):
         # default gives type LONG, but inhibits reads and writes
-        L.error("getInfo not implemented")
+        L.error("getInfo not implemented by %s", self.__class__.__name__)
         return (DBR.DBF.LONG, 1, 0)
 
     def _disconnect(self, _):
@@ -105,16 +105,16 @@ class SessionBase(object):
     def channel(self):
         return self._channel()
 
-    def put(dtype, dcount, dbrdata, reply=None, chan=None):
+    def put(self,dtype, dcount, dbrdata, reply=None, chan=None):
         if reply:
             reply.error(ECA.ECA_PUTFAIL)
-        L.error("Put not implemented")
+        L.error("Put not implemented by %s", self.__class__.__name__)
 
     def putAlarm(self, ackt=None, acks=None, reply=None, chan=None):
         pass
 
     def get(self, request):
-        L.error('Get not implemented')
+        L.error('Get not implemented by %s', self.__class__.__name__)
         request.error(ECA.ECA_GETFAIL)
 
     def monitor(self, request):
