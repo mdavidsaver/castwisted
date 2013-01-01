@@ -17,7 +17,7 @@ from TwCAS.util import staticserver
 class Options(usage.Options):
     optFlags = [["verbose", "v", "Verbose Logging"]
                     ]
-    optParameters = [["ip", "", "127.0.0.1", "Address of interface"],
+    optParameters = [["ip", "", "", "Address of interface"],
                      ["port", "", 5064, "CA Server port", int],
                      ["config", "c", None, "Configuration file"],
                     ]

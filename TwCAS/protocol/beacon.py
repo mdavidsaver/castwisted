@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from twisted.internet.task import LoopingCall
+from twisted.internet import reactor
+#from twisted.internet.task import LoopingCall
 from twisted.internet.protocol import DatagramProtocol
 
 import socket
@@ -14,16 +15,18 @@ from TwCAS.util.ifinspect import getifinfo
 class BeaconProtocol(DatagramProtocol):
     """Announces the availability of a CA TCP server
     on specified connected interfaces.
+    
+    This is important mostly because CA clients will resend
+    search queries when a new IOC is announced.
     """
-    def __init__(self, period, tcpport, udpport=5065, ifaces=[], auto=True):
+    def __init__(self, tcpport=5064, udpport=5065, ifaces=[], auto=True):
         self.L = PrefixLogger(L, self)
-
-        self.period = period
-        self.T = LoopingCall(self.pushBeacon)
         
         self.port, self.portnum = udpport, tcpport
 
         self.ifaces, self.autoiface = set(ifaces), auto
+        
+        self.period = 0.0
         
         self.cnt = 0
 
@@ -31,6 +34,10 @@ class BeaconProtocol(DatagramProtocol):
 
         self.ips = []
         for IF in getifinfo():
+            if IF.loopback:
+                # Always announce on loopback
+                self.ips.append((IF.addr,IF.addr))
+
             if IF.broadcast and (self.autoiface or IF.broadcast in self.ifaces):
                 self.ips.append((IF.broadcast,IF.addr))
 
@@ -42,15 +49,17 @@ class BeaconProtocol(DatagramProtocol):
             self.L.warn('Not announcing on any interfaces!')
 
         self.ips = [(bc,addr2int(ip)) for (bc,ip) in self.ips]
-        
-        self.T.start(self.period)
+
+        self.period = 0.02
+        self.P = reactor.callLater(self.period, self.pushBeacon)
 
     def stopProtocol(self):
-        self.T.stop()
+        self.P.cancel()
 
     def pushBeacon(self):
+
         for ip, num in self.ips:
-            msg = caheader.pack(13, 0, VERSION, self.portnum, self.cnt, num)
+            msg = caheader.pack(13, 0, VERSION, self.portnum, self.cnt, 0)#num)
 
             try:
                 self.transport.write(msg, (ip,self.port))
@@ -58,6 +67,9 @@ class BeaconProtocol(DatagramProtocol):
                 self.L.error('Send to %s:%u error %s', ip, self.port, e)
 
         self.cnt += 1
+
+        self.period = min(self.period*2.0, 15.0)
+        self.P = reactor.callLater(self.period, self.pushBeacon)
 
     def datagramReceived(self, data, src):
         pass # ignore

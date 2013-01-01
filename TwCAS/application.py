@@ -75,8 +75,7 @@ class CAServerService(service.Service):
                                  interface=self.iface,
                                  reactor=R)
 
-        beaconsend = beacon.BeaconProtocol(period=15,
-                                           udpport=self.beaconnum,
+        beaconsend = beacon.BeaconProtocol(udpport=self.beaconnum,
                                            tcpport=self.tcpnum,
                                            ifaces=[self.iface],
                                            auto=self.iface==''
