@@ -4,14 +4,16 @@ Bits related to using TwCAS with twisted.application
 """
 
 from TwCAS.protocol.caproto import SharedUDP
-from TwCAS.protocol import tcpserver, udpserver
+from TwCAS.protocol import tcpserver, udpserver, beacon
 
 from zope.interface import Interface, Attribute, implements
 
 from TwCAS.util import mailbox, interface
 
+from twisted.internet import reactor, defer
 from twisted.plugin import getPlugins, IPlugin
 from twisted.application import internet, service
+from twisted.internet.error import CannotListenError
 
 import plugins as _plugins
 
@@ -27,33 +29,89 @@ class SharedUDPServer(internet.UDPServer):
     """A UDP server using SharedUDP
     """
     def _getPort(self):
-        if self.reactor is None:
-            from twisted.internet import reactor
-        else:
-            reactor = self.reactor
-        port = SharedUDP(reactor=reactor, *self.args, **self.kwargs)
+        R = getattr(self, 'reactor', reactor)
+        port = SharedUDP(reactor=R, *self.args, **self.kwargs)
         port.startListening()
         return port
+
+class CAServerService(service.Service):
+    """Handle the ordering when starting a CA server
+    """
+    tcpport = None
+    udpport = None
+    beaconer = None
+
+    def __init__(self, server,
+                 tcpport=5064,
+                 udpport=5064,
+                 beaconport=5065,
+                 interface=''):
+        self.pvserver = server
+        self.tcpnum, self.udpnum  = tcpport, udpport
+        self.beaconnum, self.iface = beaconport, interface
+
+    def privilegedStartService(self):
+        R = getattr(self, 'reactor', reactor)
+        service.Service.privilegedStartService(self)
+        
+        tcpfact = tcpserver.CASTCPServer(self.pvserver)         
+        
+        try:
+            self.tcpport = R.listenTCP(self.tcpnum,
+                                       tcpfact,
+                                       interface=self.iface)
+        except CannotListenError:
+            self.tcpport = R.listenTCP(0,
+                                       tcpfact,
+                                       interface=self.iface)
+            self.tcpnum = self.tcpport.getHost().port
+
+        print 'Starting on',self.tcpport.getHost()
+        
+        udpserv = udpserver.CASUDP(self.pvserver, self.tcpnum)
+
+        self.udpport = SharedUDP(self.udpnum,
+                                 udpserv,
+                                 interface=self.iface,
+                                 reactor=R)
+
+        beaconsend = beacon.BeaconProtocol(period=15,
+                                           udpport=self.beaconnum,
+                                           tcpport=self.tcpnum,
+                                           ifaces=[self.iface],
+                                           auto=self.iface==''
+                                           )
+
+        self.beaconer = SharedUDP(0,
+                                  beaconsend,
+                                  interface=self.iface,
+                                  reactor=R)
+
+        try:
+            self.udpport.startListening()
+            self.beaconer.startListening()
+        except:
+            self.tcpport.stopListening()
+            self.udpport.stopListening()
+            raise
+
+    def startService(self):
+        service.Service.startService(self)
+        
+
+    def stopService(self):
+        service.Service.stopService(self)
+        P = [self.beaconer, self.udpport, self.tcpport]
+        P = [p.stopListening() for p in P]
+        return defer.DeferredList(P)
 
 def makeCASService(server, port=5064, interface=''):
     """Builds a Twisted Service (is there really any other kind?)
     
     server - Should implement INameServer and IPVServer
     """
-    fact = tcpserver.CASTCPServer(server)   
-
-    tcpserv = internet.TCPServer(port, fact,
-                                 interface=interface)
-
-    udpserv = SharedUDPServer(port,
-                                 udpserver.CASUDP(server, port),
-                                 interface=interface)
-
-    caserver = service.MultiService()
-    tcpserv.setServiceParent(caserver)
-    udpserv.setServiceParent(caserver)
-    
-    return caserver
+    return CAServerService(server, udpport=port,
+                           tcpport=port, interface=interface)
 
 class IPVFactory(Interface):
     """Builds a PV using configuration from ConfigParser

@@ -373,7 +373,7 @@ class CASTCPServer(ServerFactory):
         self.__circuits = weakref.WeakValueDictionary()
         self.pvserver = pvserver
         self.nameserv = nameserv
-        L.info('CA TCP server factory starting')
+        L.info('CA TCP server factory created')
 
     def close(self):
         self.__listener.stopListening()
