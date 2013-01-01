@@ -18,7 +18,6 @@ from twisted.internet.error import CannotListenError
 import plugins as _plugins
 
 __all__ = ['SharedUDPServer'
-          ,'makeCASService'
           ,'getPVFactory'
           ,'IPVFactory'
           ,'DumbFactory'
@@ -35,7 +34,7 @@ class SharedUDPServer(internet.UDPServer):
         return port
 
 class CAServerService(service.Service):
-    """Handle the ordering when starting a CA server
+    """Handle the ordering when starting CA server parts
     """
     tcpport = None
     udpport = None
@@ -56,17 +55,17 @@ class CAServerService(service.Service):
         
         tcpfact = tcpserver.CASTCPServer(self.pvserver)         
         
+        # prefer to start the TCP server on the requested port
         try:
             self.tcpport = R.listenTCP(self.tcpnum,
                                        tcpfact,
                                        interface=self.iface)
         except CannotListenError:
+            # fallback to some random port
             self.tcpport = R.listenTCP(0,
                                        tcpfact,
                                        interface=self.iface)
             self.tcpnum = self.tcpport.getHost().port
-
-        print 'Starting on',self.tcpport.getHost()
         
         udpserv = udpserver.CASUDP(self.pvserver, self.tcpnum)
 
@@ -103,14 +102,6 @@ class CAServerService(service.Service):
         P = [self.beaconer, self.udpport, self.tcpport]
         P = [p.stopListening() for p in P]
         return defer.DeferredList(P)
-
-def makeCASService(server, port=5064, interface=''):
-    """Builds a Twisted Service (is there really any other kind?)
-    
-    server - Should implement INameServer and IPVServer
-    """
-    return CAServerService(server, udpport=port,
-                           tcpport=port, interface=interface)
 
 class IPVFactory(Interface):
     """Builds a PV using configuration from ConfigParser

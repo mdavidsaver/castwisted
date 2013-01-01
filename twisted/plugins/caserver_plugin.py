@@ -11,7 +11,7 @@ from twisted.python import usage, log
 from twisted.plugin import IPlugin
 from twisted.application import service
 
-from TwCAS.application import makeCASService, getPVFactory
+from TwCAS.application import CAServerService, getPVFactory
 from TwCAS.util import staticserver
 
 class Options(usage.Options):
@@ -19,6 +19,7 @@ class Options(usage.Options):
                     ]
     optParameters = [["ip", "", "", "Address of interface"],
                      ["port", "", 5064, "CA Server port", int],
+                     ["beacon","", 5065, "Beacon port", int],
                      ["config", "c", None, "Configuration file"],
                     ]
 
@@ -95,6 +96,8 @@ class Maker(object):
 
         port = options['port']
 
-        return makeCASService(server, port, interface=options['ip'])
+        return CAServerService(server, tcpport=port, udpport=port,
+                               beaconport=options['beacon'],
+                               interface=options['ip'])
 
 serviceMaker = Maker()
