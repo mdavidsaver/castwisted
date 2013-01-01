@@ -78,7 +78,7 @@ class TestConnect(unittest.TestCase):
 
     def setUp(self):
         self.nameserv = TestServer()
-        self.proto = tcpserver.CASTCP(self.nameserv, prio=6, localport=1423)
+        self.proto = tcpserver.CASTCP(self.nameserv, prio=6)
         self.transport = helptest.TestTCPTransport()
 
     def test_version(self):
@@ -119,7 +119,7 @@ class TestCASChannel(unittest.TestCase):
 
     def setUp(self):
         self.serv = TestServer()
-        self.proto = tcpserver.CASTCP(self.serv, prio=6, localport=1423)
+        self.proto = tcpserver.CASTCP(self.serv, prio=6)
         self.transport = helptest.TestTCPTransport()
         self.proto.makeConnection(self.transport)
 

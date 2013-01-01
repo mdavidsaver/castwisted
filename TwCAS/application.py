@@ -40,7 +40,7 @@ def makeCASService(server, port=5064, interface=''):
     
     server - Should implement INameServer and IPVServer
     """
-    fact = tcpserver.CASTCPServer(port, server)   
+    fact = tcpserver.CASTCPServer(server)   
 
     tcpserv = internet.TCPServer(port, fact,
                                  interface=interface)

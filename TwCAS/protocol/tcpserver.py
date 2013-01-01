@@ -107,14 +107,12 @@ class CASTCP(StatefulProtocol):
     # Circuit inactivity timeout
     timeout = 60.0
     
-    def __init__(self, pvserver, prio=0, nameserv=None, localport=-1):
+    def __init__(self, pvserver, prio=0, nameserv=None):
         self.L = PrefixLogger(L, self)
 
-        assert localport>0, "Invalid local server port"
         self.pvserv = pvserver
         assert IPVServer.providedBy(pvserver)
 
-        self.localport = localport
         self.nameserv = nameserv
         if self.nameserv is not None:
             assert INameServer.providedBy(nameserv)
@@ -341,7 +339,8 @@ class CASTCP(StatefulProtocol):
 
     def __lookup(self, cmd, reply, ver, cid, cid2, payload):
         pv = str(payload).strip('\0')
-        search = PVSearch(cid, pv, None, ver, self.transport, self.localport)
+        search = PVSearch(cid, pv, None, ver, self.transport,
+                          self.transport.getHost().port)
         self.nameserv.lookupPV(search)
 
     __dispatch = {
@@ -370,9 +369,8 @@ class CASTCP(StatefulProtocol):
         return self.__str__()
 
 class CASTCPServer(ServerFactory):
-    def __init__(self, port, pvserver, prio=0, nameserv=None):
+    def __init__(self, pvserver, prio=0, nameserv=None):
         self.__circuits = weakref.WeakValueDictionary()
-        self.localport = port
         self.pvserver = pvserver
         self.nameserv = nameserv
         L.info('CA TCP server factory starting')
@@ -385,7 +383,6 @@ class CASTCPServer(ServerFactory):
 
     def buildProtocol(self, addr):
         L.debug('Building connection from %s:%d',addr.host,addr.port)
-        proto = CASTCP(self.pvserver, prio=0, nameserv=self.nameserv,
-                       localport=self.localport)
+        proto = CASTCP(self.pvserver, prio=0, nameserv=self.nameserv)
         self.__circuits[id(proto)]=proto
         return proto
