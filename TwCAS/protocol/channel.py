@@ -350,16 +350,16 @@ class Channel(object):
     def __putnotify(self, cmd, dtype, dcount, p1, p2, payload):
         self.__putCheck(dtype, dcount, len(payload))
         put = PutNotify(self, p2, dtype, dcount)
+
+        if self.rights&2==0:
+            put.error(ECA.ECA_NOWTACCESS)
+            return
         
         if dtype in _invalid_put_types:
             put.error(ECA.ECA_BADTYPE)
             return
         elif dtype in _invalid_get_types:
             self.__putAlarm(dtype, dcount, payload, put)
-            return
-
-        if self.rights&2==0:
-            put.error(ECA.ECA_NOWTACCESS)
             return
 
         self.__operations[id(put)] = put
@@ -372,6 +372,9 @@ class Channel(object):
 
     def __put(self, cmd, dtype, dcount, p1, p2, payload):
         self.__putCheck(dtype, dcount, len(payload))
+
+        if self.rights&2==0:
+            return
         
         if dtype in _invalid_put_types:
             return
@@ -379,8 +382,6 @@ class Channel(object):
             self.__putAlarm(dtype, dcount, payload, None)
             return
 
-        if self.rights&2==0:
-            return
         try:
             self.pv.put(dtype, dcount, payload, None, self)
         except:
