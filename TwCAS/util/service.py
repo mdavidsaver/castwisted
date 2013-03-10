@@ -17,7 +17,6 @@ from TwCAS.protocol import ECA
 from TwCAS import dbr as DBR
 
 __all__ = [
-    'DefaultService',
     'IServiceSession',
     'SessionBase',
     'ServiceFactory',
@@ -49,38 +48,10 @@ class IServiceSession(IPVDBR):
         be called once.
         """
 
-class DefaultService(object):
-    """Proxy access to the static configuration
-    """
-    session = None
-    def __init__(self, config, name):
-        self._name = name
-        self._config = config
-    def get(self, key, default):
-        if self._config.has_option(self._name, key):
-            return self._config.get(self._name, key)
-        else:
-            return default
-    def getboolean(self, key, default):
-        if self._config.has_option(self._name, key):
-            return self._config.getboolean(self._name, key)
-        else:
-            return default
-    def getfloat(self, key, default):
-        if self._config.has_option(self._name, key):
-            return self._config.getfloat(self._name, key)
-        else:
-            return default
-    def getint(self, key, default):
-        if self._config.has_option(self._name, key):
-            return self._config.getint(self._name, key)
-        else:
-            return default
-
 class SessionBase(object):
     implements(IServiceSession, IPlugin)
     
-    service = DefaultService
+    service = None
 
     def __init__(self, service=None, channel=None, options=''):
         self._channel = weakref.ref(channel, self._disconnect)
@@ -137,8 +108,8 @@ class ServicePV(object):
     """
     implements(IPVDBR)
 
-    def __init__(self, config, name):
-        factoryname = config.get(name, 'service')
+    def __init__(self, config):
+        factoryname = config['service']
         
         for F in getPlugins(IServiceFactory, _plugins):
             if F.name == factoryname:
@@ -146,7 +117,7 @@ class ServicePV(object):
         else:
             raise KeyError("Unknown service '%s'"%factoryname)
 
-        self.service = F.build(config, name)
+        self.service = F.build(config)
 
     def getInfo(self, request):
         Sklass = self.service.session
@@ -164,11 +135,10 @@ class IServiceFactory(Interface):
 
     name = Attribute("The unique name this factory is known by")
 
-    def build(config, name):
+    def build(config):
         """Build a new validator instance.
         
-        config - An instance of ConfigParser.SafeConfigParser
-        name   - The section name to use for this instance
+        config - Dictionary of config parameters
         
         Returns a instance implementing IDBRPV
         """
@@ -178,8 +148,8 @@ class ServiceFactory(object):
     implements(IServiceFactory, IPlugin)
     def __init__(self, name, session):
         self.name, self.session = name, session
-    def build(self, config, name):
-        service = getattr(self.session, 'service', DefaultService)
-        service = service(config, name)
+    def build(self, config):
+        service = getattr(self.session, 'service', None)
+        service = service(config) if service else config
         service.session = self.session
         return service

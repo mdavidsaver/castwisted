@@ -109,11 +109,11 @@ class IPVFactory(Interface):
 
     name = Attribute("The unique name this factory is known by")
 
-    def build(config, name):
+    def build(config):
         """Build a new validator instance.
         
-        config - An instance of ConfigParser.SafeConfigParser
-        name   - The section name to use for this instance
+        config - A read-only dictionary-like object
+        from which to read configuration parameters.
         
         Returns a instance implementing IDBRPV
         """
@@ -124,7 +124,7 @@ class DumbFactory(object):
     implements(IPVFactory, IPlugin)
     def __init__(self, name, pvclass):
         self.name, self.pvclass = name, pvclass
-    def build(self, name, config):
+    def build(self, config):
         return self.pvclass()
 
 class SelfFactory(object):
@@ -133,24 +133,21 @@ class SelfFactory(object):
     implements(IPVFactory, IPlugin)
     def __init__(self, name, pvclass):
         self.name, self.pvclass = name, pvclass
-    def build(self, name, config):
-        return self.pvclass(config, name)
+    def build(self, config):
+        return self.pvclass(config)
 
 class MailboxFactory(object):
     """Makes MailboxPV instances
     """
     implements(IPVFactory, IPlugin)
     name = "Mailbox"
-    def build(self, name, config):
-        try:
-            validator = config.get(name, 'validator')
-        except:
-            validator = 'default'
+    def build(self, config):
+        validator = config.get('validator', 'default')
 
         V = None
         for P in getPlugins(interface.IMailboxValidatorFactory, _plugins):
             if P.name == validator:
-                V = P.build(name, config)
+                V = P.build(config)
 
         if V is None:
             raise KeyError("Could not find validator '%s'"%validator)

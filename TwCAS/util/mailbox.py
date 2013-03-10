@@ -269,5 +269,5 @@ class BasicValidatorFactory(object):
     implements(IMailboxValidatorFactory, IPlugin)
     def __init__(self, name, pvclass):
         self.name, self.klass = name, pvclass
-    def build(self, config, name):
-        return self.klass(config, name)
+    def build(self, config):
+        return self.klass(config)

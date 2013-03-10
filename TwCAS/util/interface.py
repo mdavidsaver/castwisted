@@ -97,11 +97,10 @@ class IMailboxValidatorFactory(Interface):
 
     name = Attribute("The unique name this factory is known by")
 
-    def build(config, name):
+    def build(config):
         """Build a new validator instance.
         
-        config - An instance of ConfigParser.SafeConfigParser
-        name   - The section name to use for this instance
+        config - dictionary of configuration parameters
         
         Returns a instance implementing IDBRPV
         """

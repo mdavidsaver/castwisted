@@ -14,6 +14,8 @@ from twisted.application import service
 from TwCAS.application import CAServerService, getPVFactory
 from TwCAS.util import staticserver
 
+from TwCAS.util.confdict import ConfigDict
+
 class Options(usage.Options):
     optFlags = [["verbose", "v", "Verbose Logging"]
                     ]
@@ -65,10 +67,9 @@ class Maker(object):
         server = staticserver.StaticPVServer()
         
         for S in parser.sections():
-            if parser.has_option(S, 'name'):
-                name = parser.get(S, 'name')
-            else:
-                name= S
+            conf = ConfigDict(parser, S)
+
+            name = conf.get('name', S)
             rec,sep,fld = name.partition('.')
             if sep=='':
                 name+='.'
@@ -87,10 +88,13 @@ class Maker(object):
                 log.err("Unknown PV type '%s' for '%s'"%(pvtype,name))
                 continue
             try:
-                pv = factory.build(S, parser)
+                pv = factory.build(conf)
             except KeyError:
                 log.err("Failed to initialize '%s'"%name)
                 continue
+            except:
+                log.err("Failed to initialize '%s'.  Fatal"%name)
+                raise
             
             server.add(name, pv)
 

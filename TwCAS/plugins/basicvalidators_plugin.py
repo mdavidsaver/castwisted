@@ -14,25 +14,21 @@ from TwCAS.dbr.defs import string2DBF, DBF
 class CommonValidator(object):
     implements(IMailboxValidator)
 
-    def __init__(self, name, config):
-        self.name, self.config = name, config
+    def __init__(self, config):
+        self.config = config
 
-        dbf = string2DBF(config.get(name, 'dbf'))
+        dbf = string2DBF(config['dbf'])
         self.nativeDBF = self.putDBF = dbf
 
-        if config.has_option(name, 'maxCount'):
-            self.maxCount = config.getint(name, 'maxCount')
-        else:
-            self.maxCount = 1
+        self.maxCount = int(config.get('maxCount', '1'))
 
         self.rights = 3
-        if config.has_option(name, 'rw'):
-            if not config.getbool(name, 'rw'):
-                self.rights = 1
+        if config.getbool('rw', False):
+            self.rights = 1
 
-        if config.has_option(name, 'VAL'):
+        if 'VAL' in config:
             #TODO: make this work for string array with quoting
-            IV = config.get(name, 'VAL').split(',')
+            IV = config['VAL'].split(',')
 
         elif dbf==DBF.STRING:
             IV = ['']
@@ -66,38 +62,35 @@ _num_meta_parts = {
 _lim_sevr = ['HHSV', 'HSV', 'LSV', 'LLSV']
 
 class NumericValidator(CommonValidator):
-    def __init__(self, name, config):
-        super(NumericValidator, self).__init__(name, config)
+    def __init__(self, config):
+        super(NumericValidator, self).__init__(config)
 
         if self.nativeDBF in [dbr.DBF.STRING, dbr.DBF.ENUM]:
-            raise RuntimeError("%s: numeric validator requires numeric dbf"%name)
+            raise RuntimeError("numeric validator requires numeric dbf")
 
     def setup(self):
         dbf, IV, M = super(NumericValidator, self).setup()
         if M is None:
             M = dbr.DBRMeta()
 
-        if self.config.has_option(self.name, 'EGU'):
-            M.units = self.config.get(self.name, 'EGU')
-        if self.config.has_option(self.name, 'PREC'):
-            M.precision = self.config.getint(self.name, 'PREC')
+        if 'EGU' in self.config:
+            M.units = self.config['EGU']
+        if 'PREC' in self.config:
+            M.precision = self.config['PREC']
 
         conv = int
         if dbf in [dbr.DBF.FLOAT, dbr.DBF.DOUBLE]:
             conv = float
 
         for c,m in _num_meta_parts.iteritems():
-            if not self.config.has_option(self.name, c):
+            if c not in self.config:
                 continue
-            val = self.config.get(self.name, c)
+            val = self.config[c]
 
             setattr(M, m, conv(val))
 
         for L in _lim_sevr:
-            if self.config.has_option(self.name, L):
-                setattr(self, L.lower(), int(self.config.get(self.name, L)))
-            else:
-                setattr(self, L.lower(), 0)
+            setattr(self, L.lower(), int(self.config.get(L, '0')))
 
         return (dbf, IV, M)
 

@@ -9,7 +9,7 @@ class ConfigDict(object):
     """
 
     def __init__(self, conf, name):
-        self._conf, self._sec = self._conf, self._name
+        self._conf, self._sec = conf, name
 
     def __len__(self):
         return len(self.keys())
